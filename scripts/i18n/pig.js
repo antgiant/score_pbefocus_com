@@ -391,7 +391,7 @@ register_i18n_language('pig', {
       "mode_large_event": "Arge-Lay event-ay ode-may: evices-day ead-ray elay-ray apshots-snay.",
       "mode_relay": "Is-Thay evice-day is-ay elaying-ray updates-ay or-fay other-ay orers-scay.",
       "scorer_name": "Orer-Scay ame-nay: {{name}}",
-      "scorer_name_note": "Our-Yay account-ay email-ay is-ay ecorded-ray on-ay istory-hay entries-ay and-ay is-ay isible-vay o-tay everyone-ay o-whay an-cay open-ay e-thay older-fay.",
+      "scorer_name_note": "Our-Yay account-ay ame-nay (or-ay email-ay if-ay o-nay ame-nay is-ay available-ay) is-ay ecorded-ray on-ay istory-hay entries-ay and-ay is-ay isible-vay o-tay everyone-ay o-whay an-cay open-ay e-thay older-fay.",
       "never_synced": "Ot-Nay ynced-say et-yay",
       "pending_changes": "Ome-Say anges-chay ave-hay ot-nay een-bay uploaded-ay et-yay.",
       "sync_now": "Ync-Say ow-nay",

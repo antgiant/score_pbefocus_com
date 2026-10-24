@@ -5,10 +5,11 @@
  * and are not cached by the service worker. Needs the client IDs in
  * app-sync-config.js; without them isConfigured() is false.
  *
- * Both providers expose getUserEmail(): the signed-in account's email, used as
- * the scorer name on history entries while a quiz syncs to a cloud folder.
+ * Both providers expose getUserName(): the signed-in account's display name when
+ * the provider reports one, otherwise its email. It is used as the scorer name on
+ * history entries while a quiz syncs to a cloud folder.
  *
- * Google: Identity Services token client (scopes drive.file + userinfo.email) + Picker.
+ * Google: Identity Services token client (scopes drive.file + userinfo.email + userinfo.profile) + Picker.
  *         Access tokens last about an hour and there is no browser refresh
  *         token, so getToken() fails with { code: "auth" } once it expires and
  *         the UI shows a Reconnect banner.
@@ -17,7 +18,7 @@
  *         Files.ReadWrite.All incrementally.
  */
 var FolderAuth = (function () {
-  var GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
+  var GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
   var GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
   var MS_SCOPE_APP = ["Files.ReadWrite.AppFolder"];
   var MS_SCOPE_SHARED = ["Files.ReadWrite.All"];
@@ -56,6 +57,7 @@ var FolderAuth = (function () {
     tokenExpiry: 0,
     client: null,
     email: null,
+    displayName: null,
 
     isConfigured: function () {
       var c = config().google;
@@ -85,7 +87,7 @@ var FolderAuth = (function () {
             }
             self.token = resp.access_token;
             self.tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000;
-            self.loadEmail().then(function () { resolve(self.token); });
+            self.loadProfile().then(function () { resolve(self.token); });
           };
           self.client.requestAccessToken({ prompt: self.token ? "" : "consent" });
         });
@@ -99,17 +101,21 @@ var FolderAuth = (function () {
       return Promise.reject({ code: "auth", status: 401 });
     },
 
-    /** Fetch the account email once per sign-in; failures just leave it unset. */
-    loadEmail: function () {
+    /** Fetch the account name and email once per sign-in; failures just leave them unset. */
+    loadProfile: function () {
       var self = this;
       return fetch(GOOGLE_USERINFO_URL, { headers: { Authorization: "Bearer " + self.token } })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (info) { self.email = info && info.email ? info.email : null; })
-        .catch(function () { self.email = null; });
+        .then(function (info) {
+          self.email = info && info.email ? info.email : null;
+          self.displayName = info && info.name ? info.name : null;
+        })
+        .catch(function () { self.email = null; self.displayName = null; });
     },
 
-    getUserEmail: function () {
-      return Promise.resolve(this.email);
+    /** Display name if Google reports one, else the email. */
+    getUserName: function () {
+      return Promise.resolve(this.displayName || this.email || null);
     },
 
     /** Open the Google Picker to choose a folder. Resolves { folderId, name } or null. */
@@ -150,6 +156,7 @@ var FolderAuth = (function () {
       this.token = null;
       this.tokenExpiry = 0;
       this.email = null;
+      this.displayName = null;
     }
   };
 
@@ -221,11 +228,11 @@ var FolderAuth = (function () {
       });
     },
 
-    /** MSAL exposes the account's sign-in name (email / UPN) from the ID token. */
-    getUserEmail: function () {
+    /** MSAL exposes the account's display name and sign-in name (email / UPN) from the ID token. */
+    getUserName: function () {
       var self = this;
       return self.getApp().then(function () {
-        return self.account && self.account.username ? self.account.username : null;
+        return self.account ? (self.account.name || self.account.username || null) : null;
       });
     },
 

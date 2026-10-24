@@ -397,7 +397,7 @@ register_i18n_language('es', {
       "mode_large_event": "Modo de evento grande: los dispositivos leen instantáneas de los relés.",
       "mode_relay": "Este dispositivo está retransmitiendo actualizaciones para otros anotadores.",
       "scorer_name": "Nombre del anotador: {{name}}",
-      "scorer_name_note": "El correo de su cuenta se guarda en las entradas del historial y lo ve cualquiera que pueda abrir la carpeta.",
+      "scorer_name_note": "El nombre de su cuenta (o el correo si no hay nombre) se guarda en las entradas del historial y lo ve cualquiera que pueda abrir la carpeta.",
       "never_synced": "Aún no sincronizado",
       "pending_changes": "Algunos cambios aún no se han subido.",
       "sync_now": "Sincronizar ahora",

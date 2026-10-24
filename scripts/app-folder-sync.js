@@ -222,12 +222,12 @@ var FolderSync = (function () {
     return startForSession(sessionId);
   }
 
-  /** Name recorded on history entries while this quiz syncs (the signed-in email). */
+  /** Name recorded on history entries while this quiz syncs (the signed-in account name, or email if the provider gives no name). */
   function getScorerName() {
     return (current && current.config && current.config.scorerName) || null;
   }
 
-  /** Remember the signed-in account's email for a session (kept in this device's settings). */
+  /** Remember the signed-in account's name for a session (kept in this device's settings). */
   function setScorerName(sessionId, name) {
     var config = readConfig(sessionId);
     if (!config) { return; }

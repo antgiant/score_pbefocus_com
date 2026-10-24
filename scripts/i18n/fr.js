@@ -397,7 +397,7 @@ register_i18n_language('fr', {
       "mode_large_event": "Mode grand événement : les appareils lisent les instantanés des relais.",
       "mode_relay": "Cet appareil relaie les mises à jour pour les autres marqueurs.",
       "scorer_name": "Nom du marqueur : {{name}}",
-      "scorer_name_note": "L'adresse e-mail de votre compte est enregistrée dans l'historique et visible par toute personne pouvant ouvrir le dossier.",
+      "scorer_name_note": "Le nom de votre compte (ou l'adresse e-mail à défaut) est enregistré dans l'historique et visible par toute personne pouvant ouvrir le dossier.",
       "never_synced": "Pas encore synchronisé",
       "pending_changes": "Certaines modifications n'ont pas encore été envoyées.",
       "sync_now": "Synchroniser maintenant",

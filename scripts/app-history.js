@@ -315,7 +315,7 @@ function add_history_entry(actionKey, detailsKey, detailsParams) {
     session.set('historyLog', historyLog);
   }
 
-  // While the quiz syncs to a cloud folder, entries carry the signed-in account's email;
+  // While the quiz syncs to a cloud folder, entries carry the signed-in account's name (or email);
   // otherwise they are shown as local.
   const userName = (typeof FolderSync !== 'undefined' && typeof FolderSync.getScorerName === 'function')
     ? FolderSync.getScorerName()

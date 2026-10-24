@@ -155,7 +155,7 @@ describe('FolderSync controller', () => {
     assert.strictEqual(status.pending, true);
   });
 
-  it('records the signed-in email as scorer name and shows it with a visibility note', async () => {
+  it('records the signed-in name as scorer name and shows it with a visibility note', async () => {
     run(`FolderAuth.google.getToken = function () { return Promise.resolve("t"); };
          FolderProviders.createGoogleBackend = function () { return { list: function () { return Promise.resolve([]); }, get: function () { return Promise.resolve(null); }, put: function () { return Promise.resolve(); } }; };`);
     await run('FolderSync.enable("sess-1", { provider: "google", mode: "shared", folder: { folderId: "F" }, folderName: "Event", scorerName: "scorer@example.org" })');
@@ -170,5 +170,20 @@ describe('FolderSync controller', () => {
 
   it('has no scorer name when sync is off', () => {
     assert.strictEqual(run('FolderSync.getScorerName()'), null);
+  });
+
+  it('prefers the provider display name over the email, falling back to the email', async () => {
+    run('FolderAuth.microsoft.getApp = function () { return Promise.resolve(); }');
+    run('FolderAuth.microsoft.account = { name: "Pat Scorer", username: "pat@example.org" }');
+    assert.strictEqual(await run('FolderAuth.microsoft.getUserName()'), 'Pat Scorer');
+    run('FolderAuth.microsoft.account = { username: "pat@example.org" }');
+    assert.strictEqual(await run('FolderAuth.microsoft.getUserName()'), 'pat@example.org');
+    run('FolderAuth.microsoft.account = null');
+    assert.strictEqual(await run('FolderAuth.microsoft.getUserName()'), null);
+
+    run('FolderAuth.google.email = "pat@example.org"; FolderAuth.google.displayName = "Pat Scorer"');
+    assert.strictEqual(await run('FolderAuth.google.getUserName()'), 'Pat Scorer');
+    run('FolderAuth.google.displayName = null');
+    assert.strictEqual(await run('FolderAuth.google.getUserName()'), 'pat@example.org');
   });
 });

@@ -396,7 +396,7 @@ register_i18n_language('en', {
       "mode_large_event": "Large event mode: devices read relay snapshots.",
       "mode_relay": "This device is relaying updates for other scorers.",
       "scorer_name": "Scorer name: {{name}}",
-      "scorer_name_note": "Your account email is recorded on history entries and is visible to everyone who can open the folder.",
+      "scorer_name_note": "Your account name (or email if no name is available) is recorded on history entries and is visible to everyone who can open the folder.",
       "never_synced": "Not synced yet",
       "pending_changes": "Some changes have not been uploaded yet.",
       "sync_now": "Sync now",

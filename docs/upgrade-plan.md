@@ -102,7 +102,7 @@ To do: add `score.pbefocus.com` to both OAuth registrations and the family `site
   - Above 20 distinct scorers (back to standard at 15 or fewer), ordinary devices read relay snapshots only. The 3 lowest client ids among recently active devices act as relays: they pull all outboxes and publish a snapshot at most every 30 seconds when something changed. Every device derives the same election from the folder listing, so there are no locks or messages.
   - If no relay snapshot is fresh (3 minutes) devices fall back to reading outboxes. Relays that go quiet drop out after 5 minutes and the next ids take over.
   - Simulated with 20, 40, 50 and 100 clients on the mock folder (shuffled listings, dropped writes, relay failover). Not measured against real Google or Microsoft quotas yet.
-- Scorer name: while a quiz syncs, history entries carry the signed-in account's email (Google `userinfo.email` scope, Microsoft ID token). It is visible to everyone who can open a shared folder.
+- Scorer name: while a quiz syncs, history entries carry the signed-in account's display name, or its email when the provider reports no name (Google `userinfo.profile` and `userinfo.email` scopes, Microsoft ID token). It is visible to everyone who can open a shared folder.
 
 ## Decisions (2026-10-24)
 

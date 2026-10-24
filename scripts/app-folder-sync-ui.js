@@ -239,8 +239,8 @@ var FolderSyncUI = (function () {
       var reauth = FolderAuth.get(config.provider);
       guarded(function () {
         return reauth.signIn(shared)
-          .then(function () { return reauth.getUserEmail(); })
-          .then(function (email) { FolderSync.setScorerName(sessionId, email); });
+          .then(function () { return reauth.getUserName(); })
+          .then(function (name) { FolderSync.setScorerName(sessionId, name); });
       }).then(function (ok) {
         if (ok) { FolderSync.syncNow(); rerender(); }
       });
@@ -316,8 +316,8 @@ var FolderSyncUI = (function () {
       // signIn must start inside the click handler so the popup is allowed.
       var signedIn = provider === "microsoft" ? auth.signIn(shared) : (auth.isSignedIn() ? Promise.resolve() : auth.signIn());
       return signedIn.then(function () {
-        // The signed-in account's email becomes the scorer name on history entries.
-        return auth.getUserEmail().then(function (email) { scorerName = email; });
+        // The signed-in account's name (or email if no name is reported) becomes the scorer name on history entries.
+        return auth.getUserName().then(function (name) { scorerName = name; });
       }).then(function () {
         if (kind === "private") {
           if (provider === "google") {

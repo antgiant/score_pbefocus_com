@@ -330,7 +330,7 @@ Optional per-quiz sync to a cloud folder (Google Drive or OneDrive) replaces the
 - Flush on `online`, `visibilitychange`, `pagehide`; "Sync now" button
 - Status: synced / changes waiting / syncing / offline / sign-in needed / problem; expired sign-in shows Reconnect while local scoring continues
 - Large events: above 20 distinct scorers (back to standard at 15 or fewer) ordinary devices read relay snapshots only; the 3 lowest client ids among recently active devices relay (pull all outboxes, publish `snapshot-{clientId}.yjs` at most every 30s when something changed). Election is derived from the folder listing (file modified times), so no locks. Without a fresh snapshot (3 min) devices read outboxes
-- Scorer name: history entries carry the signed-in account's email while syncing (`FolderSync.getScorerName()`, from `FolderAuth.*.getUserEmail()`); it is visible to everyone with folder access
+- Scorer name: history entries carry the signed-in account's name (email if the provider gives no name) while syncing (`FolderSync.getScorerName()`, from `FolderAuth.*.getUserName()`); it is visible to everyone with folder access
 
 ### Shared helpers and merge matching
 
@@ -364,8 +364,8 @@ Available in `app-state.js`:
 
 ### Testing
 
-- **Total Tests**: 341
-- **Passing**: 341
+- **Total Tests**: 342
+- **Passing**: 342
 - **Failed**: 0
 - **Skipped**: 0
 - **Test Files**:
