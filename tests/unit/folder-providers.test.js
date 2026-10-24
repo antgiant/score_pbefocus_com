@@ -129,6 +129,21 @@ describe('graph backend', () => {
   });
 });
 
+describe('subfolders', () => {
+  it('reuses an existing Google subfolder or creates one', async () => {
+    const f = fakeFetch([[(u, i) => i.method === 'POST', () => ({ json: { id: 'made' } })], ['files?fields', () => ({ json: { files: [] } })]]);
+    assert.equal(await P.ensureGoogleSubfolder({ fetch: f, getToken: token, parentId: 'P', name: "Bob's quiz" }), 'made');
+    const f2 = fakeFetch([['files?fields', () => ({ json: { files: [{ id: 'old' }] } })]]);
+    assert.equal(await P.ensureGoogleSubfolder({ fetch: f2, getToken: token, parentId: 'P', name: 'x' }), 'old');
+  });
+  it('creates a OneDrive subfolder and keeps the drive id', async () => {
+    const f = fakeFetch([['/children', () => ({ json: { id: 'new', name: 'Quiz' } })]]);
+    const ref = await P.createGraphSubfolder({ fetch: f, getToken: token, parent: { driveId: 'D', itemId: 'I' }, name: 'Quiz' });
+    assert.deepEqual(ref, { driveId: 'D', itemId: 'new', name: 'Quiz' });
+    assert.ok(f.calls[0].url.includes('/drives/D/items/I/children'));
+  });
+});
+
 describe('session marker', () => {
   it('round-trips and rejects other JSON', () => {
     const bytes = P.buildMarker({ sessionId: 's-1', name: 'Regional' });

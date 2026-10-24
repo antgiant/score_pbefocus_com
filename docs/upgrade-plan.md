@@ -83,6 +83,16 @@ The old origin is `pbe-scores.wooleys.us`; this repo's CNAME is `score.pbefocus.
 
 To do: add `score.pbefocus.com` to both OAuth registrations and the family `site-nav.js`; update `web+pbe://` handlers, manifest `start_url`/scope, the embedding docs' hosted URL (done) and README language links.
 
+## Progress
+
+- Phase 1 (engine, mock-backend tests): done.
+- Phase 2 (providers, Storage & Sync dialog, status indicator): done except the items below. Setup steps are in `SYNC_SETUP.md`.
+  - Not yet verified against real accounts: Google sign-in and Picker, and Microsoft sign-in, because no client IDs exist yet (`scripts/app-sync-config.js` has empty placeholders).
+  - OneDrive folders are chosen by pasting a share link. The OneDrive File Picker v8 is not wired in.
+  - Joining a folder that holds a different quiz adds it through the existing binary import; this path has not been exercised against a real drive.
+  - The old Sync (rooms) code still runs alongside the new Storage button until phase 3.
+- Phase 3 (remove old sync, servers, tests, docs) and phase 4 (relay mode): not started.
+
 ## Decisions (2026-10-24)
 
 1. **[APPROVED]** Score Keeper proceeds in parallel with the shared storage module; it does not wait for Karaoke/Quiz.

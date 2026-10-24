@@ -63,16 +63,16 @@ var FolderProviders = (function () {
   function createGoogleBackend(o) {
     var ids = {}; // file name -> id, filled by list()
 
-    function req(url, init) {
+    function googleReq(url, init) {
       return request(o.fetch, o.getToken, url, init);
     }
 
-    function listPage(pageToken, acc) {
+    function googleListPage(pageToken, acc) {
       var q = "'" + o.folderId + "' in parents and trashed=false";
       var url = GOOGLE_API + "/files?q=" + encodeURIComponent(q) +
         "&fields=" + encodeURIComponent("nextPageToken,files(id,name,modifiedTime,size,md5Checksum)") +
         "&pageSize=1000" + (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "");
-      return req(url).then(function (r) { return r.json(); }).then(function (data) {
+      return googleReq(url).then(function (r) { return r.json(); }).then(function (data) {
         (data.files || []).forEach(function (f) {
           // If duplicate names exist (race on first create) keep the first seen.
           if (!(f.name in ids)) {
@@ -80,24 +80,24 @@ var FolderProviders = (function () {
             acc.push({ name: f.name, rev: f.md5Checksum || (f.modifiedTime + ":" + f.size) });
           }
         });
-        return data.nextPageToken ? listPage(data.nextPageToken, acc) : acc;
+        return data.nextPageToken ? googleListPage(data.nextPageToken, acc) : acc;
       });
     }
 
     return {
       list: function () {
         ids = {};
-        return listPage(null, []);
+        return googleListPage(null, []);
       },
       get: function (name) {
         if (!ids[name]) {
           return Promise.resolve(null);
         }
-        return req(GOOGLE_API + "/files/" + ids[name] + "?alt=media").then(toBytes);
+        return googleReq(GOOGLE_API + "/files/" + ids[name] + "?alt=media").then(toBytes);
       },
       put: function (name, bytes) {
         if (ids[name]) {
-          return req(GOOGLE_UPLOAD + "/files/" + ids[name] + "?uploadType=media", {
+          return googleReq(GOOGLE_UPLOAD + "/files/" + ids[name] + "?uploadType=media", {
             method: "PATCH",
             headers: { "Content-Type": "application/octet-stream" },
             body: bytes
@@ -112,7 +112,7 @@ var FolderProviders = (function () {
         var h = enc.encode(head), t = enc.encode(tail);
         var body = new Uint8Array(h.length + bytes.length + t.length);
         body.set(h, 0); body.set(bytes, h.length); body.set(t, h.length + bytes.length);
-        return req(GOOGLE_UPLOAD + "/files?uploadType=multipart&fields=id,name", {
+        return googleReq(GOOGLE_UPLOAD + "/files?uploadType=multipart&fields=id,name", {
           method: "POST",
           headers: { "Content-Type": "multipart/related; boundary=" + boundary },
           body: body
@@ -177,32 +177,32 @@ var FolderProviders = (function () {
       return base + (isPath ? "" : ":") + "/" + encodeURIComponent(name) + ":/content";
     };
 
-    function req(url, init) {
+    function graphReq(url, init) {
       return request(o.fetch, o.getToken, url, init);
     }
 
-    function listPage(url, acc) {
-      return req(url).then(function (r) { return r.json(); }).then(function (data) {
+    function graphListPage(url, acc) {
+      return graphReq(url).then(function (r) { return r.json(); }).then(function (data) {
         (data.value || []).forEach(function (f) {
           if (!f.folder) {
             acc.push({ name: f.name, rev: f.eTag || (f.lastModifiedDateTime + ":" + f.size) });
           }
         });
-        return data["@odata.nextLink"] ? listPage(data["@odata.nextLink"], acc) : acc;
+        return data["@odata.nextLink"] ? graphListPage(data["@odata.nextLink"], acc) : acc;
       });
     }
 
     return {
       list: function () {
         var url = children + "?$select=name,eTag,size,lastModifiedDateTime,folder&$top=200";
-        return listPage(url, []).catch(function (err) {
+        return graphListPage(url, []).catch(function (err) {
           // An app-folder path that has not been written to yet does not exist.
           if (err && err.status === 404 && isPath) { return []; }
           throw err;
         });
       },
       get: function (name) {
-        return req(fileUrl(name)).then(toBytes).catch(function (err) {
+        return graphReq(fileUrl(name)).then(toBytes).catch(function (err) {
           if (err && err.status === 404) { return null; }
           throw err;
         });
@@ -211,7 +211,7 @@ var FolderProviders = (function () {
         if (bytes.length > GRAPH_SIMPLE_UPLOAD_LIMIT) {
           return Promise.reject({ status: 413, code: "too-large" });
         }
-        return req(fileUrl(name), {
+        return graphReq(fileUrl(name), {
           method: "PUT",
           headers: { "Content-Type": "application/octet-stream" },
           body: bytes
@@ -234,6 +234,36 @@ var FolderProviders = (function () {
         throw { code: "not-a-folder" };
       }
       return { driveId: item.parentReference && item.parentReference.driveId, itemId: item.id, name: item.name };
+    });
+  }
+
+  /** Create (or reuse) a named subfolder inside a picked Google folder. */
+  function ensureGoogleSubfolder(o) {
+    var q = "name='" + o.name.replace(/'/g, "\\'") + "' and mimeType='" + GOOGLE_FOLDER_MIME +
+      "' and '" + o.parentId + "' in parents and trashed=false";
+    return request(o.fetch, o.getToken, GOOGLE_API + "/files?fields=files(id)&q=" + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.files && data.files.length) {
+          return data.files[0].id;
+        }
+        return request(o.fetch, o.getToken, GOOGLE_API + "/files?fields=id", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: o.name, mimeType: GOOGLE_FOLDER_MIME, parents: [o.parentId] })
+        }).then(function (r) { return r.json(); }).then(function (f) { return f.id; });
+      });
+  }
+
+  /** Create a subfolder inside a OneDrive folder; returns a folder reference. */
+  function createGraphSubfolder(o) {
+    var url = graphBase(o.parent) + "/children";
+    return request(o.fetch, o.getToken, url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: o.name, folder: {}, "@microsoft.graph.conflictBehavior": "rename" })
+    }).then(function (r) { return r.json(); }).then(function (item) {
+      return { driveId: o.parent.driveId, itemId: item.id, name: item.name };
     });
   }
 
@@ -262,6 +292,8 @@ var FolderProviders = (function () {
   return {
     createGoogleBackend: createGoogleBackend,
     ensureGoogleFolderPath: ensureGoogleFolderPath,
+    ensureGoogleSubfolder: ensureGoogleSubfolder,
+    createGraphSubfolder: createGraphSubfolder,
     createGraphBackend: createGraphBackend,
     resolveGraphShareLink: resolveGraphShareLink,
     encodeShareUrl: encodeShareUrl,

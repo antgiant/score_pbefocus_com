@@ -20,7 +20,13 @@ var DEFERRED_SCRIPT_PATHS = {
   blockManager: "scripts/app-block-manager.js",
   teamManager: "scripts/app-team-manager.js",
   syncCrypto: "scripts/app-sync-crypto.js",
-  sync: "scripts/app-sync.js"
+  sync: "scripts/app-sync.js",
+  folderConfig: "scripts/app-sync-config.js",
+  folderEngine: "scripts/app-folder-sync-engine.js",
+  folderProviders: "scripts/app-folder-providers.js",
+  folderAuth: "scripts/app-folder-auth.js",
+  folderSync: "scripts/app-folder-sync.js",
+  folderSyncUi: "scripts/app-folder-sync-ui.js"
 };
 
 var DEFERRED_FEATURE_GROUPS = {
@@ -32,7 +38,8 @@ var DEFERRED_FEATURE_GROUPS = {
   blockManager: ["blockManager"],
   teamManager: ["teamManager"],
   sync: ["syncCrypto", "sync"],
-  all: ["reorder", "snapshot", "importExport", "backup", "history", "blockManager", "teamManager", "syncCrypto", "sync"]
+  folderSync: ["folderConfig", "folderEngine", "folderProviders", "folderAuth", "folderSync", "folderSyncUi"],
+  all: ["reorder", "snapshot", "importExport", "backup", "history", "blockManager", "teamManager", "syncCrypto", "sync", "folderSync"]
 };
 
 var _scriptLoadPromises = {};
@@ -273,6 +280,7 @@ setup_lazy_feature_shim("showChangeLogDialog", "history");
 setup_lazy_feature_shim("showSyncDialog", "sync");
 setup_lazy_feature_shim("showSyncInfoDialog", "sync");
 setup_lazy_feature_shim("showMigrationDialog", "sync");
+setup_lazy_feature_shim("showStorageDialog", "folderSync");
 setup_lazy_feature_shim("showBackupBrowserDialog", "backup");
 setup_lazy_feature_shim("showBlockManagerDialog", "blockManager");
 setup_lazy_feature_shim("showTeamManagerDialog", "teamManager");
@@ -331,6 +339,22 @@ function initialize_embedding_api() {
   }
 }
 
+// Folder sync scripts load lazily; start them at boot only if a session uses it.
+function initialize_folder_sync() {
+  var enabled = false;
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      if (localStorage.key(i).indexOf("pbe-folder-sync:") === 0) { enabled = true; break; }
+    }
+  } catch (e) {}
+  if (!enabled) { return; }
+  ensure_feature_loaded("folderSync").then(function() {
+    if (typeof initFolderSyncFeature === "function") { initFolderSyncFeature(); }
+  }).catch(function(error) {
+    console.error("Failed to start folder sync", error);
+  });
+}
+
 // Yjs bundle loads synchronously and sets window.yjsModulesLoaded
 // But just to be safe, we'll check and wait if needed
 function initializeApp() {
@@ -340,6 +364,7 @@ function initializeApp() {
     try_initialize_display();
     initialize_pwa_handlers();
     initialize_embedding_api();
+    initialize_folder_sync();
   });
 }
 

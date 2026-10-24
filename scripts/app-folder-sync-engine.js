@@ -135,7 +135,7 @@ var FolderSyncEngine = (function () {
       });
     }
 
-    function stop() {
+    function stopEngine() {
       if (!started) {
         return;
       }
@@ -245,7 +245,7 @@ var FolderSyncEngine = (function () {
     }
 
     /** Status for the indicator: synced / pending / offline / auth / error. */
-    function getStatus() {
+    function getEngineStatus() {
       var state = "synced";
       if (lastError) {
         if (isErrorOffline(lastError)) {
@@ -263,12 +263,12 @@ var FolderSyncEngine = (function () {
 
     return {
       start: start,
-      stop: stop,
+      stop: stopEngine,
       flush: flush,
       pull: pull,
       sync: sync,
       writeSnapshot: writeSnapshot,
-      getStatus: getStatus,
+      getStatus: getEngineStatus,
       clientId: clientId
     };
   }
