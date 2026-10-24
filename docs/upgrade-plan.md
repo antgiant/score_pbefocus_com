@@ -88,8 +88,9 @@ To do: add `score.pbefocus.com` to both OAuth registrations and the family `site
 1. **[APPROVED]** Score Keeper proceeds in parallel with the shared storage module; it does not wait for Karaoke/Quiz.
 2. **[APPROVED]** `score.pbefocus.com` is the final origin.
 4. **[APPROVED]** The combined Microsoft scope set (owner says the registration is already done).
+3. **[APPROVED]** Add a zero-setup "back up to my account" option using the private `PBE Focus` app folder, alongside shared folders. It reuses the same engine.
+5. **[APPROVED]** Embedding: delete all `sync:*` commands and events with no replacement and no "disabled" stub.
 
 ## Open questions
 
-3. Add a zero-setup "back up to my account" option using the private `PBE Focus` app folder, alongside shared folders?
-5. Embedding: drop `sync:*` with no replacement (recommended), or keep a read-only "disabled" state? (Owner answered "Yes"; needs clarifying which option.)
+None at the moment.
