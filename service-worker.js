@@ -1,4 +1,4 @@
-const APP_VERSION = "2.27.0";
+const APP_VERSION = "2.28.0";
 const CACHE_PREFIX = "pbe-score-keeper";
 const SHELL_CACHE_NAME = `${CACHE_PREFIX}-shell-${APP_VERSION}`;
 const STATIC_RUNTIME_CACHE_NAME = `${CACHE_PREFIX}-static-${APP_VERSION}`;
@@ -23,6 +23,8 @@ const PRECACHE_REQUIRED_URLS = [
   "scripts/app-theme.js",
   "scripts/app-ui-mode.js",
   "scripts/app-header-menu.js",
+  "scripts/app-ui-utils.js",
+  "scripts/app-session-matching.js",
   "scripts/app-state.js",
   "scripts/app-data.js",
   "scripts/app-summaries.js",
@@ -54,8 +56,6 @@ const PRECACHE_OPTIONAL_URLS = [
   "scripts/app-history.js",
   "scripts/app-block-manager.js",
   "scripts/app-team-manager.js",
-  "scripts/app-sync-crypto.js",
-  "scripts/app-sync.js",
   "scripts/app-sync-config.js",
   "scripts/app-folder-sync-engine.js",
   "scripts/app-folder-providers.js",

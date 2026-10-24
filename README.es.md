@@ -4,18 +4,10 @@
 Una herramienta para ayudar a llevar el registro de las puntuaciones de la Experiencia Bíblica Pathfinder (PBE) (también conocida como Bible Bowl) por bloque y equipo.
 
 ## Nota sobre Almacenamiento de Datos
-Los datos se almacenan solo en su dispositivo y no se comparten de ninguna manera con ningún servidor. Esto significa que estos datos solo están en su dispositivo actual, y que debe usar las opciones de Exportar Datos en Importar/Exportar si necesita guardar copias de estos datos.
+Los datos se almacenan en su dispositivo de forma predeterminada. Si lo desea, también puede guardar un quiz en su propio Google Drive u OneDrive, o en una carpeta que comparta con otros anotadores (use el botón Almacenamiento). No se envía nada a nuestros servidores. Todavía puede usar las opciones de Exportar Datos en Importar/Exportar para guardar copias de sus datos.
 
-## Nota sobre Sincronización en Tiempo Real
-La función de Sincronización en Tiempo Real permite que múltiples dispositivos colaboren en la misma sesión usando comunicación entre pares. Aunque el sistema de sincronización incluye múltiples protecciones contra la pérdida de datos, existe un escenario extremadamente raro que podría resultar en una fusión inesperada de datos:
-
-**Condiciones requeridas (todas deben ocurrir simultáneamente):**
-1. El servidor de sincronización no está disponible temporalmente
-2. Dos usuarios crean salas exactamente al mismo tiempo
-3. Ambos generan aleatoriamente el mismo código de sala de 6 caracteres (probabilidad de 1 en 1.073.741.824)
-4. Ambos usuarios ingresan la misma contraseña
-
-Si las cuatro condiciones se alinean, las dos sesiones separadas fusionarían sus datos. Este escenario es astronómicamente improbable en la práctica, pero se documenta aquí para completar la información. Usar la función de sincronización sin contraseña (el valor predeterminado) previene este problema por completo cuando el servidor está disponible.
+## Nota sobre Almacenamiento y Sincronización
+La función de Almacenamiento y Sincronización permite que uno o más dispositivos mantengan el mismo quiz en una carpeta en la nube. Cada dispositivo escribe solo sus propios archivos y combina los de los demás, por lo que la puntuación sigue funcionando sin conexión y se pone al día cuando vuelve la conexión. Cualquiera que pueda abrir una carpeta compartida puede ver sus puntuaciones. La configuración para los propietarios del sitio se describe en `SYNC_SETUP.md`.
 
 ## Contribuir una Traducción
 

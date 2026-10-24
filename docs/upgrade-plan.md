@@ -91,7 +91,14 @@ To do: add `score.pbefocus.com` to both OAuth registrations and the family `site
   - OneDrive folders are chosen by pasting a share link. The OneDrive File Picker v8 is not wired in.
   - Joining a folder that holds a different quiz adds it through the existing binary import; this path has not been exercised against a real drive.
   - The old Sync (rooms) code still runs alongside the new Storage button until phase 3.
-- Phase 3 (remove old sync, servers, tests, docs) and phase 4 (relay mode): not started.
+- Phase 3 (remove old sync): done in 2.28.0.
+  - Removed `scripts/app-sync.js`, `scripts/app-sync-crypto.js`, `server/`, `build-yjs-sync.js`, the old `sync-*` tests and the room/migration UI. Removed all 12 `sync:*` embedding commands and the `sync:*` events, with no replacement and no stub (decision 5).
+  - The Yjs bundle was rebuilt with only Y and IndexedDB persistence (216 KB to 97 KB). The y-webrtc, y-websocket and y-protocols dependencies are gone.
+  - Kept and relocated: toast, focus trap and escape helpers (`scripts/app-ui-utils.js`) and quiz-merge name matching (`scripts/app-session-matching.js`).
+  - `web+pbe://join/...` links are no longer accepted.
+  - History entries no longer carry a scorer name (always shown as local); there is no display-name setting any more.
+  - Still to do outside this repo: shut down the Fly signaling server, and tell hosts that used the `sync:*` embedding commands.
+- Phase 4 (relay mode for more than about 20 scorers): not started.
 
 ## Decisions (2026-10-24)
 

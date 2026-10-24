@@ -19,8 +19,6 @@ var DEFERRED_SCRIPT_PATHS = {
   history: "scripts/app-history.js",
   blockManager: "scripts/app-block-manager.js",
   teamManager: "scripts/app-team-manager.js",
-  syncCrypto: "scripts/app-sync-crypto.js",
-  sync: "scripts/app-sync.js",
   folderConfig: "scripts/app-sync-config.js",
   folderEngine: "scripts/app-folder-sync-engine.js",
   folderProviders: "scripts/app-folder-providers.js",
@@ -37,9 +35,8 @@ var DEFERRED_FEATURE_GROUPS = {
   history: ["history"],
   blockManager: ["blockManager"],
   teamManager: ["teamManager"],
-  sync: ["syncCrypto", "sync"],
   folderSync: ["folderConfig", "folderEngine", "folderProviders", "folderAuth", "folderSync", "folderSyncUi"],
-  all: ["reorder", "snapshot", "importExport", "backup", "history", "blockManager", "teamManager", "syncCrypto", "sync", "folderSync"]
+  all: ["reorder", "snapshot", "importExport", "backup", "history", "blockManager", "teamManager", "folderSync"]
 };
 
 var _scriptLoadPromises = {};
@@ -197,9 +194,6 @@ function initialize_deferred_modules() {
       if (typeof handleShareTargetImport === "function") {
         handleShareTargetImport();
       }
-      if (typeof initSyncManager === "function") {
-        initSyncManager();
-      }
 
       // Upgrade other sessions (current session upgraded in critical path)
       if (typeof upgradeAllSessionsToV5 === "function") {
@@ -277,9 +271,6 @@ if (typeof document !== "undefined") {
 
 setup_lazy_feature_shim("showImportExportDialog", "importExport");
 setup_lazy_feature_shim("showChangeLogDialog", "history");
-setup_lazy_feature_shim("showSyncDialog", "sync");
-setup_lazy_feature_shim("showSyncInfoDialog", "sync");
-setup_lazy_feature_shim("showMigrationDialog", "sync");
 setup_lazy_feature_shim("showStorageDialog", "folderSync");
 setup_lazy_feature_shim("showBackupBrowserDialog", "backup");
 setup_lazy_feature_shim("showBlockManagerDialog", "blockManager");

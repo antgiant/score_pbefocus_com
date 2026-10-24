@@ -42,18 +42,6 @@ var EmbeddingCommands = {
     "timer:play",
     "timer:pause",
     "timer:restart",
-    "sync:connect",
-    "sync:disconnect",
-    "sync:getState",
-    "sync:getRoomCode",
-    "sync:joinRoom",
-    "sync:createRoom",
-    "sync:setPassword",
-    "sync:setDisplayName",
-    "sync:getPeers",
-    "sync:startParallel",
-    "sync:stopParallel",
-    "sync:listParallel",
     "state:export",
     "state:import",
     "state:previewImport",
@@ -126,18 +114,6 @@ var EmbeddingCommands = {
       "timer:play": this.timerPlay,
       "timer:pause": this.timerPause,
       "timer:restart": this.timerRestart,
-      "sync:connect": this.syncConnect,
-      "sync:disconnect": this.syncDisconnect,
-      "sync:getState": this.syncGetState,
-      "sync:getRoomCode": this.syncGetRoomCode,
-      "sync:joinRoom": this.syncJoinRoom,
-      "sync:createRoom": this.syncCreateRoom,
-      "sync:setPassword": this.syncSetPassword,
-      "sync:setDisplayName": this.syncSetDisplayName,
-      "sync:getPeers": this.syncGetPeers,
-      "sync:startParallel": this.syncStartParallel,
-      "sync:stopParallel": this.syncStopParallel,
-      "sync:listParallel": this.syncListParallel,
       "state:export": this.stateExport,
       "state:import": this.stateImport,
       "state:previewImport": this.statePreviewImport,
@@ -633,21 +609,6 @@ var EmbeddingCommands = {
       durationSeconds: Number(question_timer_duration_seconds || 0),
       questionId: question_timer_question_id || null,
       expired: question_timer_expired === true
-    };
-  },
-
-  serializeSyncState: function() {
-    var getState = this.getGlobal("getSyncState");
-    var getRoomCode = this.getGlobal("getSyncRoomCode");
-    var getName = this.getGlobal("getSyncDisplayName");
-    var getPeers = this.getGlobal("getSyncPeers");
-    var getParallel = this.getGlobal("getParallelSyncSessions");
-    return {
-      state: typeof getState === "function" ? getState() : "offline",
-      roomCode: typeof getRoomCode === "function" ? getRoomCode() : null,
-      displayName: typeof getName === "function" ? getName() : null,
-      peers: typeof getPeers === "function" ? getPeers() : [],
-      parallelSessions: typeof getParallel === "function" ? getParallel() : []
     };
   },
 
@@ -1347,125 +1308,6 @@ var EmbeddingCommands = {
     }
     var state = this.serializeTimerState();
     this.emitStateChanged({ reason: "timer:restart" });
-    return state;
-  },
-
-  syncConnect: async function(payload) {
-    await this.ensureFeature("sync");
-    payload = payload || {};
-    var displayName = this.getString(payload, ["displayName", "name"], { required: true, maxLength: 40 });
-    var roomCode = this.getString(payload, ["roomCode", "code"], { allowEmpty: true });
-    var password = this.getString(payload, ["password"], { allowEmpty: true });
-    var joinChoice = this.getString(payload, ["joinChoice", "mode"], { defaultValue: roomCode ? "join" : "create" });
-    var code = await this.requireFunction("startSync")(displayName, roomCode || null, password || null, joinChoice, payload.options || {});
-    var state = this.serializeSyncState();
-    state.roomCode = code || state.roomCode;
-    this.emit("sync:stateChanged", state);
-    return state;
-  },
-
-  syncJoinRoom: async function(payload) {
-    payload = payload || {};
-    payload.joinChoice = payload.joinChoice || "join";
-    if (!payload.roomCode && !payload.code) {
-      throw this.error("missing_parameter", "roomCode is required");
-    }
-    return this.syncConnect(payload);
-  },
-
-  syncCreateRoom: async function(payload) {
-    payload = payload || {};
-    payload.roomCode = null;
-    payload.joinChoice = "create";
-    return this.syncConnect(payload);
-  },
-
-  syncDisconnect: async function(payload) {
-    await this.ensureFeature("sync");
-    payload = payload || {};
-    this.requireFunction("stopSync")(payload.clearSessionRoom !== false);
-    var state = this.serializeSyncState();
-    this.emit("sync:stateChanged", state);
-    return state;
-  },
-
-  syncGetState: async function() {
-    await this.ensureFeature("sync");
-    return this.serializeSyncState();
-  },
-
-  syncGetRoomCode: async function() {
-    await this.ensureFeature("sync");
-    return { roomCode: this.serializeSyncState().roomCode };
-  },
-
-  syncGetPeers: async function() {
-    await this.ensureFeature("sync");
-    return { peers: this.serializeSyncState().peers };
-  },
-
-  syncStartParallel: async function(payload) {
-    await this.ensureFeature("sync");
-    payload = payload || {};
-    var sessionId = this.resolveSessionId(payload, { allowCurrent: true });
-    var displayName = this.getString(payload, ["displayName", "name"], { required: true, maxLength: 40 });
-    var roomCode = this.getString(payload, ["roomCode", "code"], { required: true });
-    var password = this.getString(payload, ["password"], { allowEmpty: true });
-    var startParallel = this.requireFunction("startParallelSessionSync");
-    return startParallel(sessionId, roomCode, displayName, password || null, payload.options || {});
-  },
-
-  syncStopParallel: async function(payload) {
-    await this.ensureFeature("sync");
-    payload = payload || {};
-    var sessionId = this.resolveSessionId(payload, { allowCurrent: true });
-    var clearSessionRoom = this.getBoolean(payload, ["clearSessionRoom"], { defaultValue: true });
-    var stopped = this.requireFunction("stopParallelSessionSync")(sessionId, clearSessionRoom);
-    return {
-      sessionId: sessionId,
-      stopped: stopped,
-      parallelSessions: this.callGlobal("getParallelSyncSessions") || []
-    };
-  },
-
-  syncListParallel: async function() {
-    await this.ensureFeature("sync");
-    return {
-      parallelSessions: this.callGlobal("getParallelSyncSessions") || []
-    };
-  },
-
-  syncSetPassword: async function(payload) {
-    await this.ensureFeature("sync");
-    var password = this.getString(payload, ["password"], { allowEmpty: true, defaultValue: null });
-    if (typeof SyncManager !== "undefined" && SyncManager) {
-      SyncManager.password = password || null;
-      SyncManager.effectivePassword = password || null;
-      SyncManager.hasCustomPassword = !!password;
-    }
-    var saveEffectivePassword = this.getGlobal("saveEffectivePassword");
-    if (typeof saveEffectivePassword === "function") {
-      saveEffectivePassword(password || null, !!password);
-    }
-    return this.serializeSyncState();
-  },
-
-  syncSetDisplayName: async function(payload) {
-    await this.ensureFeature("sync");
-    var displayName = this.getString(payload, ["displayName", "name"], { required: true, maxLength: 40 });
-    var changed = false;
-    var changeDisplayName = this.getGlobal("changeDisplayName");
-    if (typeof changeDisplayName === "function") {
-      changed = changeDisplayName(displayName);
-    } else if (typeof SyncManager !== "undefined" && SyncManager) {
-      SyncManager.displayName = displayName;
-      changed = true;
-    }
-    if (!changed) {
-      throw this.error("command_failed", "Display name update failed");
-    }
-    var state = this.serializeSyncState();
-    this.emit("sync:stateChanged", state);
     return state;
   },
 

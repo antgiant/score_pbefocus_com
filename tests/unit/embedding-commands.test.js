@@ -54,7 +54,8 @@ test('embedding command module registers the command surface', () => {
   const { context } = loadEmbeddingApp();
   const commandNames = Array.from(context.EmbeddingCommands.commandNames);
 
-  assert.equal(commandNames.length, 58);
+  assert.equal(commandNames.length, 46);
+  assert.equal(commandNames.some((name) => name.startsWith('sync:')), false);
   for (const command of commandNames) {
     assert.equal(typeof context.EmbeddingAPI.commandHandlers[command], 'function', command);
   }
@@ -242,59 +243,6 @@ test('timer commands persist local timer settings and duration config', async ()
   const autoStart = plain(await dispatch(context, 'timer:setAutoStart', { autoStart: true }));
   assert.equal(autoStart.autoStart, true);
   assert.equal(localStorage.getItem('pbe_timer_auto_start_test-session-1'), 'true');
-});
-
-test('sync commands manage parallel session providers through host API', async () => {
-  const { context } = loadEmbeddingApp();
-  const parallelSessions = [];
-  context.startParallelSessionSync = async (sessionId, roomCode, displayName, password, options) => {
-    const record = {
-      sessionId,
-      roomCode,
-      displayName,
-      password,
-      options,
-      state: 'connected',
-      peers: [],
-    };
-    parallelSessions.push(record);
-    return record;
-  };
-  context.stopParallelSessionSync = (sessionId, clearSessionRoom) => {
-    const index = parallelSessions.findIndex((session) => session.sessionId === sessionId);
-    if (index === -1) {
-      return false;
-    }
-    parallelSessions[index].clearSessionRoom = clearSessionRoom;
-    parallelSessions.splice(index, 1);
-    return true;
-  };
-  context.getParallelSyncSessions = () => parallelSessions.slice();
-
-  const started = plain(await dispatch(context, 'sync:startParallel', {
-    sessionId: 'test-session-1',
-    roomCode: 'ABC234',
-    displayName: 'Host',
-    password: 'secret',
-    options: { saveRoom: false },
-  }));
-
-  assert.equal(started.sessionId, 'test-session-1');
-  assert.equal(started.roomCode, 'ABC234');
-  assert.equal(started.options.saveRoom, false);
-
-  const listed = plain(await dispatch(context, 'sync:listParallel'));
-  assert.equal(listed.parallelSessions.length, 1);
-
-  const state = plain(await dispatch(context, 'sync:getState'));
-  assert.equal(state.parallelSessions.length, 1);
-
-  const stopped = plain(await dispatch(context, 'sync:stopParallel', {
-    sessionId: 'test-session-1',
-    clearSessionRoom: false,
-  }));
-  assert.equal(stopped.stopped, true);
-  assert.equal(stopped.parallelSessions.length, 0);
 });
 
 test('state import conflict dialog escapes content and resolves user choice', async () => {

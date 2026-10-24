@@ -10,7 +10,7 @@ The scorekeeper must be served from a web origin. Embedded mode is enabled with:
 https://score.pbefocus.com/?embedded=1
 ```
 
-Use HTTPS in production so WebRTC sync and storage APIs work consistently.
+Use HTTPS in production so storage APIs work consistently.
 
 ## 2. Add The Iframe
 
@@ -104,33 +104,11 @@ if (preview.conflicts.length > 0) {
 }
 ```
 
-Hosts that manage multiple rooms can keep additional session docs connected in the background:
-
-```javascript
-await pbe.sync.startParallel({
-  sessionId: "session-uuid",
-  roomCode: "ABC234",
-  displayName: "Scoreboard"
-});
-
-const parallel = await pbe.sync.listParallel();
-```
-
 ## 6. Listen For Events
 
 ```javascript
 const unsubscribe = pbe.on("question:scored", (score) => {
   console.log("score updated", score);
-});
-
-pbe.on("sync:stateChanged", (sync) => {
-  console.log("sync state", sync.state);
-});
-
-pbe.on("sync:peersChanged", (sync) => {
-  sync.peers.forEach((peer) => {
-    console.log(peer.displayName, peer.presence?.activeQuestionIndex);
-  });
 });
 
 // Later:

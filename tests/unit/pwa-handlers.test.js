@@ -31,7 +31,6 @@ function createContext() {
   const importedPayloads = [];
   const loadedFeatures = [];
   let launchConsumer = null;
-  let syncDialogShown = false;
   let displaySynced = false;
 
   function getElement(id) {
@@ -67,13 +66,7 @@ function createContext() {
     readyState: 'loading',
     addEventListener() {},
     getElementById: getElement,
-    querySelector(selector) {
-      if (selector === 'input[name="sync-mode"][value="join"]') {
-        return getElement('sync-mode-join');
-      }
-      if (selector === 'input[name="sync-mode"][value="create"]') {
-        return getElement('sync-mode-create');
-      }
+    querySelector() {
       return null;
     },
   };
@@ -100,7 +93,6 @@ function createContext() {
       if (key === 'pwa.file_launch_error') return `Failed to import file: ${params.error}`;
       if (key === 'pwa.file_launch_invalid') return 'Invalid file launch data';
       if (key === 'pwa.unsupported_file_type') return 'Only .yjs and .json files can be imported';
-      if (key === 'pwa.protocol_join_sync') return `Joining sync room ${params.code}...`;
       if (key === 'pwa.protocol_new_session') return 'Creating new quiz...';
       if (key === 'pwa.protocol_import_url') return 'Importing quiz from link...';
       if (key === 'pwa.protocol_error_invalid') return 'Invalid protocol link';
@@ -121,9 +113,6 @@ function createContext() {
     sync_data_to_display() {
       displaySynced = true;
     },
-    showSyncDialog() {
-      syncDialogShown = true;
-    },
     createNewSession() {
       return Promise.resolve('created-session-id');
     },
@@ -142,24 +131,19 @@ function createContext() {
     get launchConsumer() {
       return launchConsumer;
     },
-    get syncDialogShown() {
-      return syncDialogShown;
-    },
     get displaySynced() {
       return displaySynced;
     },
   };
 }
 
-test('parseProtocolUrl parses web+pbe join links using host as action', () => {
+test('parseProtocolUrl rejects the removed join-room links', () => {
   const { context } = createContext();
 
   const route = context.PWAHandlers.parseProtocolUrl('web+pbe://join/abc123?password=SECRET');
 
-  assert.equal(route.valid, true);
-  assert.equal(route.action, 'join');
-  assert.equal(route.roomCode, 'ABC123');
-  assert.equal(route.password, 'SECRET');
+  assert.equal(route.valid, false);
+  assert.equal(route.errorKey, 'pwa.protocol_error_invalid');
 });
 
 test('parseProtocolUrl parses pbe session links', () => {
@@ -183,33 +167,14 @@ test('parseProtocolUrl parses import links with file parameter', () => {
   assert.equal(route.file, fileUrl);
 });
 
-test('parseProtocolUrl reports missing room parameter', () => {
-  const { context } = createContext();
-
-  const route = context.PWAHandlers.parseProtocolUrl('web+pbe://join/');
-
-  assert.equal(route.valid, false);
-  assert.equal(route.errorKey, 'pwa.protocol_error_missing_param');
-  assert.equal(route.param, 'room');
-});
-
-test('routeProtocolHandler pre-fills the sync dialog for join links', async () => {
+test('routeProtocolHandler reports join links as invalid without loading features', async () => {
   const harness = createContext();
-  const { context, elements, loadedFeatures } = harness;
+  const { context, loadedFeatures } = harness;
 
   const result = await context.PWAHandlers.routeProtocolHandler('web+pbe://join/ABC123?password=SECRET');
 
-  assert.equal(result.success, true);
-  assert.equal(result.roomCode, 'ABC123');
-  assert.equal(harness.syncDialogShown, true);
-  assert.deepEqual(loadedFeatures, ['sync']);
-  assert.equal(elements.get('sync-mode-join').checked, true);
-  assert.equal(elements.get('sync-mode-create').checked, false);
-  assert.equal(elements.get('sync-room-code-group').style.display, 'block');
-  assert.equal(elements.get('sync-room-code').value, 'ABC123');
-  assert.equal(elements.get('sync-use-password').checked, true);
-  assert.equal(elements.get('sync-password-group').style.display, 'block');
-  assert.equal(elements.get('sync-password').value, 'SECRET');
+  assert.equal(result.success, false);
+  assert.deepEqual(loadedFeatures, []);
 });
 
 test('routeProtocolHandler creates a new session for session/new links', async () => {

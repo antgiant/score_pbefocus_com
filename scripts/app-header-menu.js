@@ -24,10 +24,6 @@ function initialize_header_menu() {
   var scoreEntryAdvancedPanel = document.getElementById("score_entry_advanced_options");
   var scoreEntryAdvancedPlaceholder = document.getElementById("score_entry_advanced_placeholder");
   var scoreEntryReorderButton = document.getElementById("score_entry_reorder_button");
-  var syncButton = document.getElementById("sync_button");
-  var syncButtonSlot = document.getElementById("sync_button_slot");
-  var syncButtonDefaultSlot = document.getElementById("default_sync_button_slot");
-  var defaultSyncFieldset = document.getElementById("default_sync_fieldset");
   if (!root || !toggle || !panel) {
     return;
   }
@@ -122,12 +118,6 @@ function initialize_header_menu() {
       return;
     }
     if (is_default_mode()) {
-      if (defaultSyncFieldset && defaultSyncFieldset.parentNode === sessionFieldset) {
-        if (defaultSyncFieldset.previousSibling !== scoreEntryReorderButton) {
-          sessionFieldset.insertBefore(scoreEntryReorderButton, defaultSyncFieldset);
-        }
-        return;
-      }
       if (sessionFieldset.lastChild !== scoreEntryReorderButton) {
         sessionFieldset.appendChild(scoreEntryReorderButton);
       }
@@ -135,32 +125,6 @@ function initialize_header_menu() {
     }
     if (!scoreEntryAdvancedPanel.contains(scoreEntryReorderButton)) {
       scoreEntryAdvancedPanel.insertBefore(scoreEntryReorderButton, scoreEntryAdvancedPanel.firstChild);
-    }
-  }
-
-  function move_sync_button_for_mode() {
-    if (!syncButton || !syncButtonSlot) {
-      return;
-    }
-    if (is_default_mode()) {
-      if (syncButtonDefaultSlot) {
-        if (!syncButtonDefaultSlot.contains(syncButton)) {
-          syncButtonDefaultSlot.appendChild(syncButton);
-        }
-      } else if (sessionFieldset) {
-        var legend = sessionFieldset.querySelector("legend");
-        if (legend) {
-          if (legend.nextSibling !== syncButton) {
-            sessionFieldset.insertBefore(syncButton, legend.nextSibling);
-          }
-        } else if (sessionFieldset.firstChild !== syncButton) {
-          sessionFieldset.insertBefore(syncButton, sessionFieldset.firstChild);
-        }
-      }
-      return;
-    }
-    if (!syncButtonSlot.contains(syncButton)) {
-      syncButtonSlot.appendChild(syncButton);
     }
   }
 
@@ -187,7 +151,6 @@ function initialize_header_menu() {
       move_timer_fieldset_for_mode();
       move_reorder_button_for_mode();
       move_question_options_for_mode();
-      move_sync_button_for_mode();
       return;
     }
 
@@ -199,7 +162,6 @@ function initialize_header_menu() {
     move_timer_fieldset_for_mode();
     move_reorder_button_for_mode();
     move_question_options_for_mode();
-    move_sync_button_for_mode();
   }
 
   toggle.addEventListener("click", function(event) {

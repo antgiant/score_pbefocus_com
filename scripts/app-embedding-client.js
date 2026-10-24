@@ -454,21 +454,6 @@
       restart: wrap("timer:restart")
     };
 
-    this.sync = {
-      connect: wrap("sync:connect"),
-      disconnect: wrap("sync:disconnect"),
-      getState: wrap("sync:getState"),
-      getRoomCode: wrap("sync:getRoomCode"),
-      joinRoom: wrap("sync:joinRoom"),
-      createRoom: wrap("sync:createRoom"),
-      setPassword: wrap("sync:setPassword"),
-      setDisplayName: wrap("sync:setDisplayName"),
-      getPeers: wrap("sync:getPeers"),
-      startParallel: wrap("sync:startParallel"),
-      stopParallel: wrap("sync:stopParallel"),
-      listParallel: wrap("sync:listParallel")
-    };
-
     this.state = {
       export: wrap("state:export"),
       import: wrap("state:import"),

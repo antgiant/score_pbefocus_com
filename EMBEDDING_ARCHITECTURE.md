@@ -15,15 +15,13 @@ This document describes the architecture for embedding PBE Score Keeper as a ful
 ### 1.2 Protocol Handler Registration
 - **Goal**: Support browser-safe `web+pbe://` protocol links for deep linking
 - **URL Schemes**:
-  - `web+pbe://join/ROOMCODE` - Join a sync room
-  - `web+pbe://join/ROOMCODE?password=PASS` - Join with password
   - `web+pbe://session/new` - Create new session
   - `web+pbe://import?file=BASE64_OR_URL` - Import session data
 
 - **Implementation**:
   - Register `protocol_handlers` in manifest
   - Parse incoming URLs in app startup
-  - Route to appropriate handlers (sync, import, etc.)
+  - Route to appropriate handlers (session, import)
 
 ---
 
@@ -87,7 +85,7 @@ pbeApi.on('event', (eventType, data) => {
 #### 2.3.3 State Synchronization
 - Host can optionally manage session state (Yjs binary export/import)
 - Frame syncs state back to host via `state:changed` event
-- Allows multi-device session sync at host level
+- Allows hosts to move session state between devices
 
 ### 2.4 Command Set
 
@@ -133,17 +131,6 @@ pbeApi.on('event', (eventType, data) => {
 - `timer:pause` - Pause timer
 - `timer:restart` - Reset and play
 
-#### Sync Features
-- `sync:connect` - Start sync with display name and room code
-- `sync:disconnect` - Stop sync
-- `sync:getState` - Get current sync state (offline/connecting/connected)
-- `sync:getRoomCode` - Get current room code
-- `sync:joinRoom` - Join existing room (with optional password)
-- `sync:createRoom` - Create and join new room (with optional password)
-- `sync:setPassword` - Update room password
-- `sync:setDisplayName` - Change display name
-- `sync:getPeers` - Get list of connected peers
-
 #### UI Control
 - `ui:setTheme` - Set light/dark theme
 - `ui:setLanguage` - Set language
@@ -166,11 +153,6 @@ pbeApi.on('event', (eventType, data) => {
 - `question:ignored` - Ignore flag toggled
 - `question:block-changed` - Block assignment changed
 
-#### Sync Events
-- `sync:stateChanged` - Sync connection state changed
-- `sync:peersChanged` - Peer list updated
-- `sync:errorOccurred` - Sync error
-
 #### UI Events
 - `ui:ready` - Frame initialization complete
 - `ui:themeChanged` - Theme updated
@@ -191,7 +173,7 @@ pbeApi.on('event', (eventType, data) => {
 
 3. `scripts/app-embedding-events.js` - Event bridge
    - Observes Yjs/global app changes
-   - Emits session, question, sync, and UI events
+   - Emits session, question, and UI events
    - Debounces high-frequency state changes
 
 4. `scripts/app-embedding-client.js` - Host-side library (optional)
@@ -306,11 +288,6 @@ var EMBEDDING_CONFIG = {
       console.log('Scored:', data);
     });
 
-    // Start sync
-    await pbeApp.command('sync:connect', {
-      displayName: 'Scorekeeper',
-      roomCode: 'ABC123'
-    });
   </script>
 </body>
 </html>
@@ -359,7 +336,6 @@ var embeddingAPI = {
 
 ### 3.1 Bidirectional State Sync
 - Export/import session state via Yjs binary
-- Parallel sync sessions across devices
 - Conflict resolution UI
 
 ### 3.2 Batch Commands

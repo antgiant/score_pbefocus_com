@@ -62,7 +62,6 @@ export class PBEScoreKeeperAPI {
   score: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
   block: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
   timer: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
-  sync: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
   state: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
   ui: Record<string, (payload?: unknown, options?: unknown) => Promise<unknown>>;
 }

@@ -600,17 +600,6 @@ tr:nth-child(even){
 [data-ui-mode="default"] .header-menu-session-slot .config-fieldset {
   margin: 0;
 }
-#default_sync_fieldset {
-  display: none;
-}
-[data-ui-mode="default"] #default_sync_fieldset {
-  display: block;
-  margin-top: 0.75rem;
-}
-[data-ui-mode="default"] .default-sync-button-slot {
-  display: flex;
-  align-items: center;
-}
 [data-ui-mode="default"] .header-menu-rounding-slot {
   display: flex;
   flex-direction: column;

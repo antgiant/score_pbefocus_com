@@ -173,47 +173,31 @@ test.describe('Session Manager Functions', function() {
     assert.ok(!deleteButtonPattern.test(html), 'Delete buttons should not be disabled');
   });
 
-test('createSessionManagerDialogHTML shows sync icon when session has sync room', function() {
+test('createSessionManagerDialogHTML shows cloud icon when session has a cloud folder', function() {
     const { context } = loadApp(buildMultiSessionSeed(2));
     
     const sessions = context.getAllSessions();
     const currentSessionId = context.DocManager.activeSessionId;
     
-    // Set a sync room on the first session to simulate a synced session
-    const sessionDoc = context.getSessionDoc(sessions[0].id);
-    const session = sessionDoc.getMap('session');
-    let config = session.get('config');
-    if (!config) {
-      config = new context.Y.Map();
-      session.set('config', config);
-    }
-    config.set('syncRoom', 'ABC123');
-    
-    // Also update the global cache
-    const globalDoc = context.getGlobalDoc();
-    const meta = globalDoc.getMap('meta');
-    let sessionSyncRooms = meta.get('sessionSyncRooms');
-    if (!sessionSyncRooms) {
-      sessionSyncRooms = new context.Y.Map();
-      meta.set('sessionSyncRooms', sessionSyncRooms);
-    }
-    sessionSyncRooms.set(sessions[0].id, 'ABC123');
+    // Cloud folder settings are kept per session on this device
+    context.localStorage.setItem('pbe-folder-sync:' + sessions[0].id, JSON.stringify({ provider: 'google' }));
     
     const html = context.createSessionManagerDialogHTML(sessions, currentSessionId);
     
-    assert.ok(html.includes('session-manager-sync-icon'), 'Should have sync icon for session with sync room');
+    assert.ok(html.includes('session-manager-sync-icon'), 'Should have cloud icon for session with cloud folder');
+    assert.equal((html.match(/session-manager-sync-icon/g) || []).length, 1, 'Only the configured session gets the icon');
   });
 
-  test('createSessionManagerDialogHTML does not show sync icon when no sync room', function() {
+  test('createSessionManagerDialogHTML does not show cloud icon when no cloud folder', function() {
     const { context } = loadApp(buildMultiSessionSeed(2));
     
     const sessions = context.getAllSessions();
     const currentSessionId = context.DocManager.activeSessionId;
     
-    // Don't set any sync rooms - sessions should not have sync icons
+    // No cloud folders configured - no icons
     const html = context.createSessionManagerDialogHTML(sessions, currentSessionId);
     
-    assert.ok(!html.includes('session-manager-sync-icon'), 'Should not have sync icon when no sync room');
+    assert.ok(!html.includes('session-manager-sync-icon'), 'Should not have cloud icon when no cloud folder');
   });
 });
 

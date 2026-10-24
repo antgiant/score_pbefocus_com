@@ -1369,15 +1369,6 @@ function checkAndShowContinueOrNewDialog() {
 }
 
 function sync_data_to_display() {
-  // Hide any sync loading overlay since we're now displaying data
-  // (Check for document to avoid errors in test environment)
-  if (typeof hideSyncLoadingState === 'function' && typeof document !== 'undefined') {
-    try {
-      hideSyncLoadingState();
-    } catch (e) {
-      // Ignore errors in test environment
-    }
-  }
 
   if (typeof stateInitialized !== 'undefined' && !stateInitialized) {
     return;
@@ -1517,14 +1508,17 @@ function sync_data_to_display() {
 
   const currentSessionIndex = get_current_session_index();
   
-  // Get sync status for each session (to show 🔄 indicator)
-  var syncStatuses = (typeof getSessionSyncStatuses === 'function') ? getSessionSyncStatuses() : {};
+  // Sessions that sync to a cloud folder on this device get a ☁️ indicator
+  var cloudSessionIds = get_session_order();
+  function sessionUsesCloudFolder(index) {
+    try { return !!localStorage.getItem('pbe-folder-sync:' + cloudSessionIds[index - 1]); } catch (e) { return false; }
+  }
 
   //Set up Session quick navigation
   var session_quick_nav = '<select name="session_quick_nav" id="session_quick_nav" class="config-select" onchange="local_data_update(this)"">';
   let temp_count = (currentSessionIndex>session_count?currentSessionIndex:session_count);
   for (let i=1; i <= temp_count; i++) {
-    var syncIndicator = syncStatuses[i] ? ' (🔄)' : '';
+    var syncIndicator = sessionUsesCloudFolder(i) ? ' (☁️)' : '';
     if (i==currentSessionIndex) {
       session_quick_nav += '<option value="'+i+'" selected>'+i+' of '+session_count+syncIndicator+' - '+HTMLescape(session_names[i])+'</option>';
     } else {

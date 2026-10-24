@@ -235,7 +235,7 @@ test('client resolves concurrent commands by response id', async () => {
   await markReady(harness);
 
   const first = harness.api.command('session:list');
-  const second = harness.api.command('sync:getState');
+  const second = harness.api.command('session:list');
   await Promise.resolve();
 
   const firstRequest = harness.sent.at(-2).message;
@@ -244,7 +244,7 @@ test('client resolves concurrent commands by response id', async () => {
   sendFromFrame(harness, {
     type: 'embedding:response',
     id: secondRequest.id,
-    command: 'sync:getState',
+    command: 'session:list',
     ok: true,
     result: { state: 'offline' },
   });
@@ -284,32 +284,6 @@ test('client batch wrapper sends batch:run command', async () => {
   });
 
   assert.deepEqual(await pending, { count: 2, results: [] });
-});
-
-test('client sync parallel wrappers send sync commands', async () => {
-  const harness = createHarness();
-  await markReady(harness);
-
-  const pending = harness.api.sync.startParallel({
-    sessionId: 's-2',
-    roomCode: 'ABC234',
-    displayName: 'Host',
-  });
-  await Promise.resolve();
-
-  const request = harness.sent.at(-1).message;
-  assert.equal(request.command, 'sync:startParallel');
-  assert.equal(request.payload.sessionId, 's-2');
-
-  sendFromFrame(harness, {
-    type: 'embedding:response',
-    id: request.id,
-    command: 'sync:startParallel',
-    ok: true,
-    result: { sessionId: 's-2', state: 'connected' },
-  });
-
-  assert.deepEqual(await pending, { sessionId: 's-2', state: 'connected' });
 });
 
 test('destroy removes listeners and rejects pending work', async () => {

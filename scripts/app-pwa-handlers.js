@@ -373,24 +373,6 @@ var PWAHandlers = {
       };
     }
 
-    if (action === "join") {
-      var roomCode = this.normalizeRoomCode(pathParts[0] || url.searchParams.get("room"));
-      if (!roomCode) {
-        return {
-          valid: false,
-          action: action,
-          errorKey: "pwa.protocol_error_missing_param",
-          param: "room"
-        };
-      }
-      return {
-        valid: true,
-        action: action,
-        roomCode: roomCode,
-        password: url.searchParams.get("password") || null
-      };
-    }
-
     if (action === "session") {
       var sessionAction = (pathParts[0] || url.searchParams.get("action") || "").toLowerCase();
       if (!sessionAction) {
@@ -432,14 +414,6 @@ var PWAHandlers = {
     };
   },
 
-  normalizeRoomCode: function(roomCode) {
-    if (typeof roomCode !== "string") {
-      return null;
-    }
-
-    var normalized = roomCode.trim().toUpperCase();
-    return /^[A-Z0-9]{6}$/.test(normalized) ? normalized : null;
-  },
 
   routeProtocolHandler: function(input) {
     var route = input && input.valid !== undefined ? input : this.parseProtocolUrl(input);
@@ -450,10 +424,6 @@ var PWAHandlers = {
         success: false,
         error: route
       });
-    }
-
-    if (route.action === "join") {
-      return this.handleJoinSync(route.roomCode, route.password);
     }
 
     if (route.action === "session") {
@@ -471,83 +441,7 @@ var PWAHandlers = {
     });
   },
 
-  handleJoinSync: function(roomCode, password) {
-    var self = this;
-    var normalized = this.normalizeRoomCode(roomCode);
-    if (!normalized) {
-      this.notifyProtocolError({
-        errorKey: "pwa.protocol_error_missing_param",
-        param: "room"
-      });
-      return Promise.resolve({
-        success: false,
-        error: "invalid_room"
-      });
-    }
 
-    this.notifyInfo(this.text("pwa.protocol_join_sync", { code: normalized }));
-
-    return this.ensureFeature("sync")
-      .then(function() {
-        if (typeof showSyncDialog !== "function") {
-          throw new Error("showSyncDialog unavailable");
-        }
-        showSyncDialog();
-        self.prefillSyncDialog(normalized, password);
-        return {
-          success: true,
-          action: "join",
-          roomCode: normalized,
-          password: password || null
-        };
-      })
-      .catch(function(error) {
-        self.notifyError(self.text("pwa.protocol_error_invalid"));
-        return {
-          success: false,
-          error: error
-        };
-      });
-  },
-
-  prefillSyncDialog: function(roomCode, password) {
-    if (typeof document === "undefined") {
-      return;
-    }
-
-    var joinRadio = document.querySelector ? document.querySelector('input[name="sync-mode"][value="join"]') : null;
-    var createRadio = document.querySelector ? document.querySelector('input[name="sync-mode"][value="create"]') : null;
-    var roomCodeGroup = document.getElementById ? document.getElementById("sync-room-code-group") : null;
-    var roomCodeInput = document.getElementById ? document.getElementById("sync-room-code") : null;
-
-    if (createRadio) {
-      createRadio.checked = false;
-    }
-    if (joinRadio) {
-      joinRadio.checked = true;
-    }
-    if (roomCodeGroup && roomCodeGroup.style) {
-      roomCodeGroup.style.display = "block";
-    }
-    if (roomCodeInput) {
-      roomCodeInput.value = roomCode;
-    }
-
-    if (password) {
-      var passwordToggle = document.getElementById ? document.getElementById("sync-use-password") : null;
-      var passwordGroup = document.getElementById ? document.getElementById("sync-password-group") : null;
-      var passwordInput = document.getElementById ? document.getElementById("sync-password") : null;
-      if (passwordToggle) {
-        passwordToggle.checked = true;
-      }
-      if (passwordGroup && passwordGroup.style) {
-        passwordGroup.style.display = "block";
-      }
-      if (passwordInput) {
-        passwordInput.value = password;
-      }
-    }
-  },
 
   handleSessionAction: function(action) {
     var self = this;

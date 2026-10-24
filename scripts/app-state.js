@@ -46,12 +46,7 @@ async function initialize_state() {
       
       // Set flag to show welcome back dialog after display is initialized
       hasExistingDataOnLoad = true;
-      
-      // Initialize sync manager for WebRTC sync
-      if (typeof initSyncManager === 'function') {
-        initSyncManager();
-      }
-      
+
       window.stateInitialized = true;
       return;
     }
@@ -69,11 +64,6 @@ async function initialize_state() {
       hasExistingDataOnLoad = true;
       await migrate_localStorage_to_v3(data_version);
       await load_from_yjs();
-    }
-
-    // Initialize sync manager for WebRTC sync
-    if (typeof initSyncManager === 'function') {
-      initSyncManager();
     }
 
     // Mark state as initialized
@@ -441,15 +431,6 @@ async function createNewSession(name) {
     return null;
   }
 
-  // Check if currently synced - creating new session means leaving sync
-  if (typeof handleSessionSwitch === 'function') {
-    // Use existing handleSessionSwitch which shows confirmation and disconnects
-    var shouldProceed = await handleSessionSwitch('new-session-pending');
-    if (!shouldProceed) {
-      return null; // User cancelled
-    }
-  }
-
   // Get current settings to copy forward
   const config = currentSession.get('config');
   const temp_max_points = config.get('maxPointsPerQuestion');
@@ -530,7 +511,7 @@ async function createEmptySessionForSync(name) {
   const sessionId = generateSessionId();
   var d = new Date();
   var formattedDate = (typeof format_date === 'function') ? format_date(d) : d.toLocaleString();
-  const sessionName = name || t('sync.synced_session_name', { date: formattedDate });
+  const sessionName = name || t('matching.synced_session_name', { date: formattedDate });
 
   // Create new session doc - completely empty except for basic structure
   const sessionDoc = await initSessionDoc(sessionId);
@@ -625,14 +606,6 @@ async function switchSession(sessionIdOrIndex) {
   if (!sessionId || !sessionOrder.includes(sessionId)) {
     console.error('Invalid session:', sessionIdOrIndex);
     return false;
-  }
-
-  // Notify sync module before switching sessions (may show confirmation)
-  if (typeof handleSessionSwitch === 'function' && oldSessionId !== sessionId) {
-    var shouldProceed = await handleSessionSwitch(sessionId);
-    if (!shouldProceed) {
-      return false; // User cancelled the switch
-    }
   }
 
   // Load session doc if not already loaded
@@ -787,9 +760,11 @@ async function deleteSession(sessionIdOrIndex, skipConfirm, mergeContext) {
   // Destroy session doc and clear storage
   await destroySessionDoc(sessionId, true);
 
-  // Disconnect from sync if we deleted the synced session
-  if (typeof handleSyncedSessionDeleted === 'function') {
-    handleSyncedSessionDeleted(sessionId);
+  // Forget this device's cloud folder settings for the deleted session
+  if (typeof FolderSync !== 'undefined' && typeof FolderSync.disable === 'function') {
+    FolderSync.disable(sessionId);
+  } else {
+    try { localStorage.removeItem('pbe-folder-sync:' + sessionId); } catch (e) {}
   }
 
   // Switch to new current if needed
@@ -1071,16 +1046,15 @@ function createSessionManagerDialogHTML(sessions, currentSessionId) {
   let listHtml = '';
   const canDelete = sessions.length > 1;
   
-  // Get sync statuses for all sessions (shows if session has a saved sync room)
-  const syncStatuses = (typeof getSessionSyncStatuses === 'function') ? getSessionSyncStatuses() : {};
 
   for (let i = 0; i < sessions.length; i++) {
     const session = sessions[i];
     const isCurrent = session.id === currentSessionId;
-    const hasSyncRoom = syncStatuses[i + 1]; // 1-based index in syncStatuses
+    let hasCloudFolder = false;
+    try { hasCloudFolder = !!localStorage.getItem('pbe-folder-sync:' + session.id); } catch (e) {}
     const currentClass = isCurrent ? ' current-session' : '';
     const currentBadge = isCurrent ? '<span class="session-manager-current-badge">●</span>' : '';
-    const syncIcon = hasSyncRoom ? '<span class="session-manager-sync-icon" title="' + t('sync.has_sync_room') + '">🔄</span>' : '';
+    const syncIcon = hasCloudFolder ? '<span class="session-manager-sync-icon" title="' + t('storage.session_synced') + '">☁️</span>' : '';
 
     listHtml += '<li class="session-manager-item' + currentClass + '" data-session-id="' + session.id + '" data-index="' + i + '" draggable="true">' +
       '<span class="session-manager-drag-handle" aria-label="' + t('session_manager.drag_aria', { name: HTMLescape(session.name) }) + '">☰</span>' +
@@ -2020,17 +1994,17 @@ async function showMergeMatchingDialog(comparison) {
  */
 function createMergeMatchingDialogHTML(comparison) {
   let html = '<div class="sync-dialog matching-dialog" role="dialog" aria-labelledby="matching-dialog-title" aria-modal="true">' +
-    '<h2 id="matching-dialog-title">' + t('sync.matching_title') + '</h2>' +
-    '<p>' + t('sync.matching_description') + '</p>';
+    '<h2 id="matching-dialog-title">' + t('matching.matching_title') + '</h2>' +
+    '<p>' + t('matching.matching_description') + '</p>';
 
   // Teams section
-  html += createMergeMatchingSection('teams', t('sync.matching_teams_header'), comparison.teams);
+  html += createMergeMatchingSection('teams', t('matching.matching_teams_header'), comparison.teams);
 
   // Blocks section
-  html += createMergeMatchingSection('blocks', t('sync.matching_blocks_header'), comparison.blocks);
+  html += createMergeMatchingSection('blocks', t('matching.matching_blocks_header'), comparison.blocks);
 
   // Questions section
-  html += createMergeMatchingSection('questions', t('sync.matching_questions_header'), comparison.questions);
+  html += createMergeMatchingSection('questions', t('matching.matching_questions_header'), comparison.questions);
 
   html += '<div class="button-row">' +
     '<button type="button" class="cancel-matching-btn">' + t('merge.cancel_button') + '</button>' +
@@ -2104,7 +2078,7 @@ function createMergeLocalSelector(type, remoteIndex, selectedValue, unmatchedLoc
   let html = '<select class="matching-select" data-type="' + type + '" data-remote-index="' + remoteIndex + '">';
 
   // Option to create new
-  html += '<option value="new" ' + (selectedValue === 'new' ? 'selected' : '') + '>' + t('sync.matching_create_new') + '</option>';
+  html += '<option value="new" ' + (selectedValue === 'new' ? 'selected' : '') + '>' + t('matching.matching_create_new') + '</option>';
 
   // Options for unmatched target items
   for (let i = 0; i < unmatchedLocal.length; i++) {

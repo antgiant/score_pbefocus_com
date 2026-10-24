@@ -146,25 +146,6 @@ Timer:
 | `timer:pause` | none |
 | `timer:restart` | `{ play? }` |
 
-Sync:
-
-| Command | Payload |
-| --- | --- |
-| `sync:connect` | `{ displayName, roomCode?, password?, joinChoice? }` |
-| `sync:disconnect` | `{ clearSessionRoom? }` |
-| `sync:getState` | none |
-| `sync:getRoomCode` | none |
-| `sync:joinRoom` | `{ displayName, roomCode, password? }` |
-| `sync:createRoom` | `{ displayName, password? }` |
-| `sync:setPassword` | `{ password? }` |
-| `sync:setDisplayName` | `{ displayName }` |
-| `sync:getPeers` | none |
-| `sync:startParallel` | `{ sessionId? or sessionIndex?, roomCode, displayName, password?, options? }` |
-| `sync:stopParallel` | `{ sessionId? or sessionIndex?, clearSessionRoom? }` |
-| `sync:listParallel` | none |
-
-`sync:getState` includes `parallelSessions` when background session sync providers are active. Parallel sync is intended for hosts that need multiple session docs connected at the same time; it does not replace the active-room UI connection.
-
 State:
 
 | Command | Payload |
@@ -213,7 +194,7 @@ Or directly:
 iframe.contentWindow.postMessage({
   type: "embedding:subscribe",
   id: "sub-1",
-  events: ["question:scored", "sync:stateChanged"]
+  events: ["question:scored", "ui:themeChanged"]
 }, "https://score.pbefocus.com");
 ```
 
@@ -223,9 +204,8 @@ Available events:
 | --- | --- |
 | Session | `session:created`, `session:switched`, `session:renamed`, `session:deleted`, `session:stateChanged` |
 | Question | `question:changed`, `question:scored`, `question:ignored`, `question:block-changed` |
-| Sync | `sync:stateChanged`, `sync:peersChanged`, `sync:errorOccurred` |
 | UI | `ui:ready`, `ui:themeChanged`, `ui:languageChanged` |
 
-High-frequency state and sync events are debounced or throttled.
+High-frequency state events are debounced or throttled.
 
-`sync:getPeers` and sync peer events include peer `presence` metadata when available, including active session, active question, and recent scoring context.
+Cloud folder sync (Storage & Sync) is controlled from the app itself and is not part of the embedding API.

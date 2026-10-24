@@ -271,7 +271,7 @@ function refresh_history_display() {
     const timeStr = entry.timestamp ? ((typeof format_time === 'function') ? format_time(entry.timestamp) : new Date(entry.timestamp).toLocaleTimeString()) : t('edit_log.unknown_time');
     
     // User display: show display name or "(local)" for local changes
-    const userDisplay = entry.user || t('sync.history_local_user');
+    const userDisplay = entry.user || t('matching.history_local_user');
 
     // Style global entries differently with CSS class (not inline style)
     if (entry.isGlobal) {
@@ -315,10 +315,8 @@ function add_history_entry(actionKey, detailsKey, detailsParams) {
     session.set('historyLog', historyLog);
   }
 
-  // Get user name from SyncManager if connected, otherwise null
-  const userName = (typeof SyncManager !== 'undefined' && SyncManager.state === 'connected') 
-    ? SyncManager.displayName 
-    : null;
+  // Scorers are not identified; entries from this device are shown as local
+  const userName = null;
 
   // Create a new history entry with translation keys
   const entry = new Y.Map();

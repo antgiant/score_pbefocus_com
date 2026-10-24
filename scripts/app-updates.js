@@ -7,7 +7,7 @@
  * - Periodic background sync for auto-updates (when installed as PWA)
  */
 
-var APP_VERSION = "2.27.0";
+var APP_VERSION = "2.28.0";
 var PWA_CACHE_PREFIX = "pbe-score-keeper";
 var PWA_TOOLS_DIALOG_ID = "pwa-tools-dialog-overlay";
 var pwaToolsDialogKeyHandler = null;
@@ -163,7 +163,7 @@ function getPwaDiagnostics() {
   var hasNavigator = typeof navigator !== "undefined";
   var hasServiceWorker = !!(hasNavigator && navigator.serviceWorker);
   var hasController = !!(hasNavigator && navigator.serviceWorker && navigator.serviceWorker.controller);
-  var syncState = (typeof getSyncState === "function") ? getSyncState() : "offline";
+  var syncState = (typeof FolderSync !== "undefined" && FolderSync.getStatus) ? FolderSync.getStatus().state : "off";
   var periodicSyncSupported = false;
 
   diagnostics.push({
@@ -578,8 +578,8 @@ function should_reload_after_service_worker_update() {
     return true;
   }
 
-  // Avoid reload interruptions while actively collaborating online.
-  if (typeof getSyncState === "function" && getSyncState() !== "offline") {
+  // Avoid reloading while changes are still waiting to be uploaded to the cloud folder.
+  if (typeof FolderSync !== "undefined" && FolderSync.getStatus && FolderSync.getStatus().pending) {
     return false;
   }
 

@@ -71,8 +71,6 @@ const TEST_ALWAYS_LOAD_SCRIPTS = [
   'scripts/app-snapshot.js',
   'scripts/app-import-export.js',
   'scripts/app-backup.js',
-  'scripts/app-sync-crypto.js',
-  'scripts/app-sync.js',
   'scripts/app-history.js',
   'scripts/app-block-manager.js',
   'scripts/app-team-manager.js',

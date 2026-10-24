@@ -62,6 +62,8 @@
   <script defer src="scripts/app-theme.js"></script>
   <script defer src="scripts/app-ui-mode.js"></script>
   <script defer src="scripts/app-header-menu.js"></script>
+  <script defer src="scripts/app-ui-utils.js"></script>
+  <script defer src="scripts/app-session-matching.js"></script>
   <script defer src="scripts/app-state.js"></script>
   <script defer src="scripts/app-data.js"></script>
   <script defer src="scripts/app-summaries.js"></script>
@@ -131,20 +133,11 @@
         </div>
         <h1 data-i18n="app.title">PBE Score Keeper</h1>
         <div class="header-sync">
-          <div id="sync_button_slot" class="sync-button-slot">
-            <button id="sync_button" class="sync-button" onclick="showSyncDialog()" data-i18n-title="sync.button_tooltip">
-              <span class="sync-icon">🔄</span>
-              <span class="sync-status" data-i18n="sync.button">Sync</span>
+          <div id="storage_button_slot" class="sync-button-slot">
+            <button id="storage_button" class="sync-button storage-button" type="button" onclick="showStorageDialog()" data-state="off" data-i18n-title="storage.button_tooltip">
+              <span class="storage-icon" aria-hidden="true">☁️</span>
+              <span class="storage-status" data-i18n="storage.button">Storage</span>
             </button>
-          </div>
-          <button id="storage_button" class="sync-button storage-button" type="button" onclick="showStorageDialog()" data-state="off" data-i18n-title="storage.button_tooltip">
-            <span class="storage-icon" aria-hidden="true">☁️</span>
-            <span class="storage-status" data-i18n="storage.button">Storage</span>
-          </button>
-          <span id="sync_server_badge" class="sync-server-badge" style="display: none;" data-i18n-title="sync.server_badge_tooltip">🖥️</span>
-          <div id="sync_peers" class="sync-peers" style="display: none;">
-            <span class="peer-count"></span>
-            <div class="peer-tooltip"></div>
           </div>
         </div>
       </div>
@@ -166,13 +159,6 @@
             <button id="new_session" class="config-add-btn" onclick='local_data_update(this)' data-i18n="config.new_session">New Quiz</button>
             <button id="manage_sessions" class="config-add-btn" onclick='showSessionManagerDialog()' data-i18n="session_manager.manage_button">Manage Quizzes</button>
           </div>
-          <fieldset class="config-fieldset default-sync-fieldset" id="default_sync_fieldset">
-            <legend class="default-sync-legend">
-              <span data-i18n="sync.title">Collaborate</span>
-              <a href="#" class="sync-info-link" onclick="showSyncInfoDialog(); return false;" data-i18n-title="sync.info_link_title" data-i18n-aria-label="sync.info_link_title">ⓘ</a>
-            </legend>
-            <div id="default_sync_button_slot" class="default-sync-button-slot"></div>
-          </fieldset>
         </fieldset>
         <div id="teams_fieldset_placeholder"></div>
         <fieldset class="config-fieldset" id="teams_fieldset">
@@ -469,18 +455,12 @@
               <input type="file" id="import_file" />
             </div>
           </fieldset>
-          <fieldset>
-            <legend data-i18n="advanced.device_migration">Device Migration</legend>
-            <p data-i18n="advanced.migration_description">Transfer all quizzes between devices using peer-to-peer sync.</p>
-            <button class="config-add-btn" id="migration_send" onclick="showMigrationDialog('send')" data-i18n="advanced.migration_send">Send to Another Device</button>
-            <button class="config-add-btn" id="migration_receive" onclick="showMigrationDialog('receive')" data-i18n="advanced.migration_receive">Receive from Another Device</button>
-          </fieldset>
         </div>
       </div>
     </div>
     <div id="scores_tabs_placeholder"></div>
     <footer><p><span data-i18n="footer.feedback">Have an idea to make this better?</span> <a id="footer_feedback_link" target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/e/1FAIpQLSfp9N-Zryv6H0Dw70PVC9ImTH81JabJ6LGA-DgCjhAn1SQqjA/viewform?usp=dialog" data-feedback-base-url="https://docs.google.com/forms/d/e/1FAIpQLSfp9N-Zryv6H0Dw70PVC9ImTH81JabJ6LGA-DgCjhAn1SQqjA/viewform?usp=dialog" data-feedback-version-entry="entry.1929638831" data-i18n="footer.let_me_know">Let me know</a>.</p>
-    <p><center data-i18n="footer.version" data-i18n-version="2.27.0">v 2.27.0</center></p></footer>
+    <p><center data-i18n="footer.version" data-i18n-version="2.28.0">v 2.28.0</center></p></footer>
 </body>
 
 </html>

@@ -300,89 +300,47 @@ The application operates in multi-doc mode with:
 
 IndexedDB persistence uses separate keys for each Y.Doc (`pbe-score-keeper-global`, `pbe-score-keeper-session-{id}`).
 
-## WebRTC Sync Architecture
+## Cloud Folder Sync Architecture
 
 ### Overview
 
-Real-time peer-to-peer synchronization using WebRTC and Yjs awareness protocol. Located in `scripts/app-sync.js`.
+Optional per-quiz sync to a cloud folder (Google Drive or OneDrive) replaces the old WebRTC rooms. IndexedDB stays the primary store; the folder is a replica that several scorers can share. Plan and decisions: `docs/upgrade-plan.md`. Registration steps: `SYNC_SETUP.md`.
 
-### Components
+### Components (all lazy-loaded as the `folderSync` feature in `app.js`)
 
-- `SyncManager` - Central sync controller with state, peers, and configuration
-- `WebrtcProvider` from y-webrtc - WebRTC connection management  
-- Awareness protocol - Presence and display name tracking
-- `SyncError` - Error type constants for handling failures
+- `scripts/app-folder-sync-engine.js` - `FolderSyncEngine`: provider-independent outbox/pull engine (Yjs and the backend are injected)
+- `scripts/app-folder-providers.js` - `FolderProviders`: Google Drive and OneDrive (Graph) REST backends, share-link resolution, session marker
+- `scripts/app-folder-auth.js` - `FolderAuth`: browser sign-in and pickers (Google Identity Services + Picker, MSAL); SDKs load only when a provider is chosen
+- `scripts/app-folder-sync.js` - `FolderSync`: per-session settings (`localStorage` key `pbe-folder-sync:{sessionId}`), polling loop, status
+- `scripts/app-folder-sync-ui.js` - Storage & Sync dialog and header status button (`showStorageDialog()`)
+- `scripts/app-sync-config.js` - client IDs (empty placeholders until registrations exist)
 
-### Room System
+### Folder layout and rules
 
-- 6-character room codes (e.g., "ABC123")
-- Characters: A-Z, 2-9 (no ambiguous: 0,O,1,I)
-- One room = one session (always)
-- Room names: `pbe-sync-{code}`
-- Switching sessions disconnects from sync
-- Optional password protection (unchecked by default)
+- One folder per session: `pbe-session.json` marker, `c-{clientId}.yjs` outbox per device, optional `snapshot-{clientId}.yjs`
+- Every device writes only its own files; the app never deletes other devices' files
+- Remote updates are applied with origin `'remote-folder'` and are never re-uploaded
+- Revisions (modified time/size/ETag) only decide what to download, never ordering
+- Sync is opt-in per session and the global session list is not synced
+- Private backup uses the app's own `PBE Focus` folder; shared folders are picked (Google Picker) or resolved from a pasted share link (OneDrive)
 
-### Signaling Servers
+### Connectivity
 
-Minimum 3 servers configured for redundancy:
-- Primary: `wss://y-webrtc-pbe.fly.dev`
-- Backup 1: `wss://signaling.yjs.dev`
-- Backup 2: `wss://y-webrtc-signaling-us.herokuapp.com`
+- Adaptive polling (about 15s while scoring, 60s idle, paused when the tab is hidden), exponential backoff honoring `Retry-After`
+- Flush on `online`, `visibilitychange`, `pagehide`; "Sync now" button
+- Status: synced / changes waiting / syncing / offline / sign-in needed / problem; expired sign-in shows Reconnect while local scoring continues
+- Not built yet: relay mode for events with more than about 20 scorers (plan phase 4)
 
-### Join Behavior
+### Shared helpers and merge matching
 
-When joining an existing room:
-1. User chooses: Create new session (default) or Merge into current
-2. If merging, name matching dialog appears if differences detected
-3. Auto-match by exact name (case-insensitive)
-4. Manual resolution for unmatched items
-
-### Username Collision Handling
-
-- Duplicate display names get auto-suffixed: "Alice" → "Alice (2)"
-- User notified via toast when name is changed
-- Checked both on join and when peers change
-
-### History Attribution
-
-All history entries include `user` field:
-- Connected users: display name
-- Local/offline: null (shown as "(local)")
-
-### Error Handling
-
-- `handleSyncError(error, context)` - Graceful error handling with i18n messages
-- `retryConnection(attempt)` - Exponential backoff (max 30s), retries forever
-- Network offline/online events trigger automatic reconnection
-- Peer disconnect detection triggers proactive reconnection
-- Session deletion while synced triggers disconnect with notification
-
-### Accessibility
-
-- All dialogs keyboard accessible with focus trap
-- Escape key closes dialogs
-- Screen reader announcements for state changes
-- ARIA live regions for peer join/leave
-- Visible focus indicators
-
-### Key Functions
-
-- `initSyncManager()` - Initialize on app startup
-- `startSync(displayName, roomCode, password, joinChoice)` - Connect to room
-- `stopSync()` - Disconnect from current room
-- `showSyncDialog()` - Show connect/disconnect dialog
-- `showNameMatchingDialog(comparison)` - Show name matching UI
-- `handleSessionSwitch(newSessionId)` - Handle session switch while synced
-- `handleSyncedSessionDeleted(sessionId)` - Handle synced session deletion
-- `compareSessionData(local, remote)` - Compare for name matching
-- `applyMappings(mappings, sessionDoc)` - Apply user-confirmed mappings
+- `scripts/app-ui-utils.js` - `showToast`, `trapFocus`, `escapeHtml`, `announceToScreenReader`
+- `scripts/app-session-matching.js` - `compareSessionData`, `getMatchStats` used by the quiz merge flow
 
 ### Testing
 
-- Unit tests: `tests/unit/sync-*.test.js`
-- UI tests: `tests/ui/sync-*.test.js`
-- Manual testing required for actual WebRTC functionality
-- Accessibility testing with screen readers recommended
+- Unit tests: `tests/unit/folder-sync-engine.test.js` (mock folder backend in `tests/helpers/mock-folder-backend.js`), `tests/unit/folder-providers.test.js`, `tests/unit/session-matching.test.js`
+- UI tests: `tests/ui/folder-sync-dialog.test.js` (own context; the shared DOM harness runs timers immediately)
+- Real Google/OneDrive sign-in needs manual testing with real client IDs
 
 ### Session Manager
 
@@ -405,13 +363,13 @@ Available in `app-state.js`:
 
 ### Testing
 
-- **Total Tests**: 300
-- **Passing**: 300
+- **Total Tests**: 329
+- **Passing**: 329
 - **Failed**: 0
 - **Skipped**: 0
 - **Test Files**:
-  - UI tests: blocks, cross-tab-sync, exports, extra-credit, ignore-question, max-points, reorder, rounding, score-summaries, session-manager, session-question-jump, sessions, sync-accessibility, sync-dialog, sync-focus, sync-indicator, teams
-  - Unit tests: core, i18n, multi-doc, no-duplicates, repair-cache, sync-core, sync-matching, sync-presence, sync-sessions
+  - UI tests: blocks, cross-tab-sync, exports, extra-credit, folder-sync-dialog, ignore-question, max-points, reorder, rounding, score-summaries, session-manager, session-question-jump, sessions, teams, timer, ui-mode
+  - Unit tests: calculations, core, created-at-backfill, embedding (api, client, commands, events, integration), folder-providers, folder-sync-engine, header-menu, i18n, i18n-ui, import-export, multi-doc, no-duplicates, pwa-handlers, pwa-support, repair-cache, session-matching, snapshot, timer-inputs, uuid-structures
 
 ### Notes for Maintainers
 

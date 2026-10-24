@@ -18,14 +18,10 @@ var EmbeddingEvents = {
   sessionNamesObserver: null,
   sessionUpdateHandler: null,
   patchedUpdateDataElement: false,
-  patchedStopSync: false,
-  syncCallbacksHooked: false,
   timers: {},
   suppressDiffUntil: 0,
   throttleMs: {
-    "session:stateChanged": 100,
-    "sync:stateChanged": 100,
-    "sync:peersChanged": 100
+    "session:stateChanged": 100
   },
   lastEmitAt: {},
 
@@ -40,8 +36,6 @@ var EmbeddingEvents = {
     this.attachGlobalObservers();
     this.attachActiveSessionObserver();
     this.patchQuestionNavigation();
-    this.hookSyncCallbacks();
-    this.scheduleSyncHookRetries();
     this.initialized = true;
     return true;
   },
@@ -59,7 +53,6 @@ var EmbeddingEvents = {
     this.globalObserver = null;
     this.sessionNamesObserver = null;
     this.sessionUpdateHandler = null;
-    this.syncCallbacksHooked = false;
     this.timers = {};
     this.suppressDiffUntil = 0;
     this.lastEmitAt = {};
@@ -109,8 +102,6 @@ var EmbeddingEvents = {
       return 0;
     }
 
-    this.updatePresenceFromEvent(eventType, data);
-
     var throttleMs = options.throttleMs;
     if (throttleMs === undefined) {
       throttleMs = this.throttleMs[eventType] || 0;
@@ -131,39 +122,6 @@ var EmbeddingEvents = {
     }
 
     return EmbeddingAPI.emit(eventType, data || {});
-  },
-
-  updatePresenceFromEvent: function(eventType, data) {
-    var updatePresence = this.getGlobal("updateSyncPresence");
-    if (typeof updatePresence !== "function") {
-      return;
-    }
-    if (eventType !== "question:changed" && eventType !== "question:scored" && eventType !== "question:ignored" && eventType !== "question:block-changed") {
-      return;
-    }
-    data = data || {};
-    var patch = {
-      lastEmbeddingEvent: eventType,
-      lastEmbeddingEventAt: Date.now()
-    };
-    if (data.questionId || data.id) {
-      patch.activeQuestionId = data.questionId || data.id;
-    }
-    if (data.questionIndex || data.index || data.number) {
-      patch.activeQuestionIndex = data.questionIndex || data.index || data.number;
-    }
-    if (eventType === "question:scored") {
-      patch.lastScore = {
-        questionId: data.questionId || data.id || null,
-        questionIndex: data.questionIndex || data.index || null,
-        teamId: data.teamId || null,
-        teamIndex: data.teamIndex || null,
-        score: data.score !== undefined ? data.score : null,
-        extraCredit: data.extraCredit !== undefined ? data.extraCredit : null,
-        total: data.total !== undefined ? data.total : null
-      };
-    }
-    updatePresence(patch);
   },
 
   emitStateChanged: function(reason) {
@@ -582,90 +540,6 @@ var EmbeddingEvents = {
     return question;
   },
 
-  hookSyncCallbacks: function() {
-    if (this.syncCallbacksHooked || typeof SyncManager === "undefined" || !SyncManager) {
-      return false;
-    }
-
-    var self = this;
-    var previousStateChange = SyncManager.onStateChange;
-    var previousPeersChange = SyncManager.onPeersChange;
-    var previousError = SyncManager.onError;
-
-    SyncManager.onStateChange = function(state) {
-      if (typeof previousStateChange === "function") {
-        previousStateChange.apply(this, arguments);
-      }
-      self.emit("sync:stateChanged", self.syncPayload({ state: state }), { throttleMs: self.throttleMs["sync:stateChanged"] });
-    };
-
-    SyncManager.onPeersChange = function(peers) {
-      if (typeof previousPeersChange === "function") {
-        previousPeersChange.apply(this, arguments);
-      }
-      self.emit("sync:peersChanged", self.syncPayload({ peers: peers || [] }), { throttleMs: self.throttleMs["sync:peersChanged"] });
-    };
-
-    SyncManager.onError = function(error, context, errorType) {
-      if (typeof previousError === "function") {
-        previousError.apply(this, arguments);
-      }
-      self.emit("sync:errorOccurred", self.syncPayload({
-        error: {
-          code: errorType || "sync_error",
-          message: error && error.message ? error.message : String(error || "Sync error"),
-          context: context || null
-        }
-      }));
-    };
-
-    this.patchStopSync();
-    this.syncCallbacksHooked = true;
-    return true;
-  },
-
-  patchStopSync: function() {
-    if (this.patchedStopSync) {
-      return;
-    }
-    var root = (typeof globalThis !== "undefined") ? globalThis : (typeof window !== "undefined" ? window : null);
-    if (!root || typeof root.stopSync !== "function") {
-      return;
-    }
-    var self = this;
-    var original = root.stopSync;
-    root.stopSync = function() {
-      var result = original.apply(this, arguments);
-      self.emit("sync:stateChanged", self.syncPayload(), { throttleMs: self.throttleMs["sync:stateChanged"] });
-      return result;
-    };
-    this.patchedStopSync = true;
-  },
-
-  scheduleSyncHookRetries: function() {
-    var self = this;
-    [0, 250, 1000, 2500].forEach(function(delay) {
-      setTimeout(function() {
-        self.hookSyncCallbacks();
-      }, delay);
-    });
-  },
-
-  syncPayload: function(extra) {
-    var payload = (typeof EmbeddingCommands !== "undefined" && EmbeddingCommands && typeof EmbeddingCommands.serializeSyncState === "function")
-      ? EmbeddingCommands.serializeSyncState()
-      : {
-        state: typeof getSyncState === "function" ? getSyncState() : "offline",
-        roomCode: typeof getSyncRoomCode === "function" ? getSyncRoomCode() : null,
-        peers: typeof getSyncPeers === "function" ? getSyncPeers() : []
-      };
-    if (extra) {
-      Object.keys(extra).forEach(function(key) {
-        payload[key] = extra[key];
-      });
-    }
-    return payload;
-  }
 };
 
 if (typeof module !== "undefined" && module.exports) {
