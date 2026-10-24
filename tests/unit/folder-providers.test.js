@@ -52,7 +52,7 @@ describe('google backend', () => {
     ]);
     const b = P.createGoogleBackend({ fetch: f, getToken: token, folderId: 'F' });
     const list = await b.list();
-    assert.deepEqual(list, [{ name: 'c-a.yjs', rev: 'm1' }, { name: 'c-b.yjs', rev: 't:5' }]);
+    assert.deepEqual(list, [{ name: 'c-a.yjs', rev: 'm1', modified: undefined }, { name: 'c-b.yjs', rev: 't:5', modified: undefined }]);
     assert.deepEqual([...await b.get('c-a.yjs')], [1, 2, 3]);
     assert.equal(await b.get('missing.yjs'), null);
     await b.put('c-a.yjs', new Uint8Array([4]));
@@ -88,7 +88,13 @@ describe('graph backend', () => {
       ['/next', () => ({ json: { value: [{ name: 'snapshot-a.yjs', lastModifiedDateTime: 'x', size: 3 }] } })]
     ]);
     const b = P.createGraphBackend({ fetch: f, getToken: token, folder: { driveId: 'D', itemId: 'I' } });
-    assert.deepEqual(await b.list(), [{ name: 'c-a.yjs', rev: 'e1' }, { name: 'snapshot-a.yjs', rev: 'x:3' }]);
+    assert.deepEqual(await b.list(), [{ name: 'c-a.yjs', rev: 'e1', modified: undefined }, { name: 'snapshot-a.yjs', rev: 'x:3', modified: undefined }]);
+  });
+
+  it('reports modified times as epoch milliseconds', async () => {
+    const f = fakeFetch([['/children', () => ({ json: { value: [{ name: 'c-a.yjs', eTag: 'e', lastModifiedDateTime: '2026-10-24T12:00:00Z' }] } })]]);
+    const b = P.createGraphBackend({ fetch: f, getToken: token, folder: { itemId: 'I' } });
+    assert.equal((await b.list())[0].modified, Date.parse('2026-10-24T12:00:00Z'));
   });
 
   it('reads and writes content by name, tolerates 404 on get, rejects oversize', async () => {

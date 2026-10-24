@@ -4,11 +4,11 @@ const Y = require('yjs');
 const Engine = require('../../scripts/app-folder-sync-engine.js');
 const { createMockFolder, createMemoryStore } = require('../helpers/mock-folder-backend');
 
-function makeClient(folder, id, opts) {
+function makeClient(folder, id, opts, engineOptions) {
   const doc = new Y.Doc();
   const backend = folder.view(opts);
   const store = createMemoryStore();
-  const engine = Engine.create({ Y, doc, backend, store, clientId: id });
+  const engine = Engine.create(Object.assign({ Y, doc, backend, store, clientId: id }, engineOptions));
   return { doc, backend, store, engine, id };
 }
 
@@ -203,7 +203,7 @@ describe('many scorers (standard mode)', () => {
       const shuffle = () => Math.random() - 0.5;
       const clients = [];
       for (let i = 0; i < n; i++) {
-        clients.push(makeClient(folder, 'c' + i, { shuffle }));
+        clients.push(makeClient(folder, 'c' + i, { shuffle }, { relay: { enterClients: 1000 } }));
       }
       clients.forEach((c) => { c.backend.dropRate = 0.1; });
       for (let round = 0; round < 3; round++) {
@@ -217,4 +217,116 @@ describe('many scorers (standard mode)', () => {
       assert.equal(Object.keys(clients[0].doc.getMap('m').toJSON()).length, n * 3);
     });
   }
+});
+
+describe('relay mode (large events)', () => {
+  const CFG = { enterClients: 20, exitClients: 15, relayCount: 3, snapshotIntervalMs: 30000, activeMs: 300000, freshSnapshotMs: 180000 };
+
+  function setup(n, extra) {
+    const clock = { t: 1000000 };
+    const folder = createMockFolder(clock);
+    const clients = [];
+    for (let i = 0; i < n; i++) {
+      const id = 'c' + String(i).padStart(3, '0');
+      const c = makeClient(folder, id, null, { now: () => clock.t, relay: Object.assign({}, CFG, extra) });
+      clients.push(c);
+    }
+    return { clock, folder, clients };
+  }
+
+  // One 15s polling tick for everyone, in order, then time moves on.
+  async function tick(env, ms = 15000, subset) {
+    for (const c of subset || env.clients) { await c.engine.sync(); }
+    env.clock.t += ms;
+  }
+
+  it('elects the lowest active client ids and ignores stale ones', () => {
+    const now = 1000000;
+    const entries = [
+      { name: 'c-a.yjs', rev: '1', modified: now - 1000 },
+      { name: 'c-b.yjs', rev: '1', modified: now - 1000 },
+      { name: 'c-c.yjs', rev: '1', modified: now - 1000 },
+      { name: 'c-d.yjs', rev: '1', modified: now - 1000 },
+      { name: 'c-0stale.yjs', rev: '1', modified: now - 999999 }
+    ];
+    assert.deepEqual(Engine.electRelays(entries, 'z', now, CFG), ['a', 'b', 'c']);
+    assert.deepEqual(Engine.electRelays(entries, 'a0', now, CFG), ['a', 'a0', 'b']);
+  });
+
+  it('stays in standard mode at or below the threshold', async () => {
+    const env = setup(20);
+    env.clients.forEach((c, i) => add(c, 'k' + i, i));
+    await tick(env); await tick(env);
+    assert.equal(env.clients[5].engine.getStatus().mode, 'standard');
+    assert.equal(env.clients.some((c) => c.engine.getStatus().relay), false);
+  });
+
+  it('100 scorers converge through relays and ordinary devices read snapshots only', async () => {
+    const env = setup(100);
+    env.clients.forEach((c, i) => add(c, 'k' + i, i));
+    for (let i = 0; i < 8; i++) { await tick(env, 15000); }
+    const first = snapshot(env.clients[0]);
+    env.clients.forEach((c) => assert.equal(snapshot(c), first));
+    assert.equal(Object.keys(env.clients[0].doc.getMap('m').toJSON()).length, 100);
+    const relays = env.clients.filter((c) => c.engine.getStatus().relay).map((c) => c.id);
+    assert.deepEqual(relays, ['c000', 'c001', 'c002']);
+    assert.ok(env.clients.every((c) => c.engine.getStatus().mode === 'relay'));
+    // Steady state: nothing new means ordinary devices download nothing.
+    const ordinary = env.clients[50];
+    const before = ordinary.backend.calls.get;
+    for (let i = 0; i < 4; i++) { await tick(env, 15000); }
+    assert.equal(ordinary.backend.calls.get, before);
+    // One new score: an ordinary device fetches only relay snapshots, never the 99 other outboxes.
+    add(env.clients[70], 'new', 1);
+    for (let i = 0; i < 6; i++) { await tick(env, 15000); }
+    const fetched = ordinary.backend.calls.get - before;
+    assert.ok(fetched >= 1 && fetched <= 6, 'downloads after one update: ' + fetched);
+    assert.equal(ordinary.doc.getMap('m').get('new'), 1);
+  });
+
+  it('new data reaches every device within a couple of relay intervals', async () => {
+    const env = setup(40);
+    for (let i = 0; i < 6; i++) { await tick(env, 15000); }
+    add(env.clients[30], 'late', 'score');
+    // outbox upload (tick), relay pull + snapshot (<=30s), ordinary pull (<=15s)
+    for (let i = 0; i < 6; i++) { await tick(env, 15000); }
+    assert.ok(env.clients.every((c) => c.doc.getMap('m').get('late') === 'score'));
+  });
+
+  it('fails over when a relay goes quiet', async () => {
+    const env = setup(30);
+    env.clients.forEach((c, i) => add(c, 'k' + i, i));
+    for (let i = 0; i < 6; i++) { await tick(env, 15000); }
+    // c000..c002 disconnect; their files go stale after activeMs
+    const alive = env.clients.slice(3);
+    for (let i = 0; i < 30; i++) { await tick(env, 15000, alive); }
+    add(alive[10], 'after', 1);
+    for (let i = 0; i < 8; i++) { await tick(env, 15000, alive); }
+    const relays = alive.filter((c) => c.engine.getStatus().relay).map((c) => c.id);
+    assert.deepEqual(relays, ['c003', 'c004', 'c005']);
+    assert.ok(alive.every((c) => c.doc.getMap('m').get('after') === 1));
+  });
+
+  it('falls back to reading outboxes when no relay snapshot is fresh', async () => {
+    const env = setup(25);
+    env.clients.forEach((c, i) => add(c, 'k' + i, i));
+    // Only ordinary devices ever sync: no one with the relay role has run, so no snapshot exists yet.
+    const ordinary = env.clients.slice(5);
+    await tick(env, 15000, ordinary); await tick(env, 15000, ordinary);
+    const reader = ordinary[0];
+    assert.equal(Object.keys(reader.doc.getMap('m').toJSON()).length, 20);
+  });
+
+  it('returns to standard mode when scorers leave (hysteresis)', async () => {
+    const env = setup(30);
+    for (let i = 0; i < 3; i++) { await tick(env); }
+    assert.equal(env.clients[10].engine.getStatus().mode, 'relay');
+    // remove files of 12 scorers so 18 remain: still above exit threshold (15) -> stays relay
+    for (let i = 18; i < 30; i++) { delete env.folder.files['c-' + env.clients[i].id + '.yjs']; delete env.folder.files['snapshot-' + env.clients[i].id + '.yjs']; }
+    await tick(env, 15000, env.clients.slice(0, 18));
+    assert.equal(env.clients[10].engine.getStatus().mode, 'relay');
+    for (let i = 14; i < 18; i++) { delete env.folder.files['c-' + env.clients[i].id + '.yjs']; delete env.folder.files['snapshot-' + env.clients[i].id + '.yjs']; }
+    await tick(env, 15000, env.clients.slice(0, 14));
+    assert.equal(env.clients[10].engine.getStatus().mode, 'standard');
+  });
 });

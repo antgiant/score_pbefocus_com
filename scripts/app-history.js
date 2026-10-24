@@ -315,8 +315,11 @@ function add_history_entry(actionKey, detailsKey, detailsParams) {
     session.set('historyLog', historyLog);
   }
 
-  // Scorers are not identified; entries from this device are shown as local
-  const userName = null;
+  // While the quiz syncs to a cloud folder, entries carry the signed-in account's email;
+  // otherwise they are shown as local.
+  const userName = (typeof FolderSync !== 'undefined' && typeof FolderSync.getScorerName === 'function')
+    ? FolderSync.getScorerName()
+    : null;
 
   // Create a new history entry with translation keys
   const entry = new Y.Map();

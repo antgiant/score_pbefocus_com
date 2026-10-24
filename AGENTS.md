@@ -329,7 +329,8 @@ Optional per-quiz sync to a cloud folder (Google Drive or OneDrive) replaces the
 - Adaptive polling (about 15s while scoring, 60s idle, paused when the tab is hidden), exponential backoff honoring `Retry-After`
 - Flush on `online`, `visibilitychange`, `pagehide`; "Sync now" button
 - Status: synced / changes waiting / syncing / offline / sign-in needed / problem; expired sign-in shows Reconnect while local scoring continues
-- Not built yet: relay mode for events with more than about 20 scorers (plan phase 4)
+- Large events: above 20 distinct scorers (back to standard at 15 or fewer) ordinary devices read relay snapshots only; the 3 lowest client ids among recently active devices relay (pull all outboxes, publish `snapshot-{clientId}.yjs` at most every 30s when something changed). Election is derived from the folder listing (file modified times), so no locks. Without a fresh snapshot (3 min) devices read outboxes
+- Scorer name: history entries carry the signed-in account's email while syncing (`FolderSync.getScorerName()`, from `FolderAuth.*.getUserEmail()`); it is visible to everyone with folder access
 
 ### Shared helpers and merge matching
 
@@ -363,12 +364,12 @@ Available in `app-state.js`:
 
 ### Testing
 
-- **Total Tests**: 329
-- **Passing**: 329
+- **Total Tests**: 341
+- **Passing**: 341
 - **Failed**: 0
 - **Skipped**: 0
 - **Test Files**:
-  - UI tests: blocks, cross-tab-sync, exports, extra-credit, folder-sync-dialog, ignore-question, max-points, reorder, rounding, score-summaries, session-manager, session-question-jump, sessions, teams, timer, ui-mode
+  - UI tests: blocks, cross-tab-sync, exports, extra-credit, folder-sync-dialog, history-scorer-name, ignore-question, max-points, reorder, rounding, score-summaries, session-manager, session-question-jump, sessions, teams, timer, ui-mode
   - Unit tests: calculations, core, created-at-backfill, embedding (api, client, commands, events, integration), folder-providers, folder-sync-engine, header-menu, i18n, i18n-ui, import-export, multi-doc, no-duplicates, pwa-handlers, pwa-support, repair-cache, session-matching, snapshot, timer-inputs, uuid-structures
 
 ### Notes for Maintainers

@@ -98,7 +98,11 @@ To do: add `score.pbefocus.com` to both OAuth registrations and the family `site
   - `web+pbe://join/...` links are no longer accepted.
   - History entries no longer carry a scorer name (always shown as local); there is no display-name setting any more.
   - Still to do outside this repo: shut down the Fly signaling server, and tell hosts that used the `sync:*` embedding commands.
-- Phase 4 (relay mode for more than about 20 scorers): not started.
+- Phase 4 (relay mode): done in 2.29.0.
+  - Above 20 distinct scorers (back to standard at 15 or fewer), ordinary devices read relay snapshots only. The 3 lowest client ids among recently active devices act as relays: they pull all outboxes and publish a snapshot at most every 30 seconds when something changed. Every device derives the same election from the folder listing, so there are no locks or messages.
+  - If no relay snapshot is fresh (3 minutes) devices fall back to reading outboxes. Relays that go quiet drop out after 5 minutes and the next ids take over.
+  - Simulated with 20, 40, 50 and 100 clients on the mock folder (shuffled listings, dropped writes, relay failover). Not measured against real Google or Microsoft quotas yet.
+- Scorer name: while a quiz syncs, history entries carry the signed-in account's email (Google `userinfo.email` scope, Microsoft ID token). It is visible to everyone who can open a shared folder.
 
 ## Decisions (2026-10-24)
 

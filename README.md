@@ -25,7 +25,7 @@ Browser support for file and protocol handlers varies. If a handler is unavailab
 Data is stored on your device by default. If you want, you can also save a quiz to your own Google Drive or OneDrive, or to a folder you share with other scorers (use the Storage button). Nothing is sent to our servers. You can still use the Export Data options under Import/Export to save copies of your data.
 
 ## Storage & Sync Note
-The Storage & Sync feature lets one or more devices keep the same quiz in a cloud folder. Each device writes only its own files and merges everyone else's, so scoring keeps working offline and catches up when the connection returns. Anyone who can open a shared folder can see its scores. Setup for site owners is described in `SYNC_SETUP.md`.
+The Storage & Sync feature lets one or more devices keep the same quiz in a cloud folder. Each device writes only its own files and merges everyone else's, so scoring keeps working offline and catches up when the connection returns. While a quiz syncs, history entries record your signed-in account email as the scorer name; anyone who can open a shared folder can see its scores and those emails. For events with more than about 20 scorers it switches to a large-event mode automatically. Setup for site owners is described in `SYNC_SETUP.md`.
 
 ## Contributing a Translation
 

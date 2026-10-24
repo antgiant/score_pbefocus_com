@@ -2,8 +2,9 @@
  * In-memory shared folder for folder sync tests. Each client gets its own
  * view so failures (offline, dropped writes, delays) can be injected per device.
  */
-function createMockFolder() {
+function createMockFolder(clock) {
   var files = {};
+  var stamp = function () { return clock ? clock.t : undefined; };
   var revCounter = 0;
 
   function view(opts) {
@@ -18,7 +19,7 @@ function createMockFolder() {
         var names = Object.keys(files);
         // Cloud listings have no guaranteed order.
         if (opts.shuffle) { names.sort(function () { return opts.shuffle(); }); }
-        return Promise.resolve(names.map(function (n) { return { name: n, rev: files[n].rev }; }));
+        return Promise.resolve(names.map(function (n) { return { name: n, rev: files[n].rev, modified: files[n].modified }; }));
       },
       get: function (name) {
         this.calls.get++;
@@ -31,7 +32,7 @@ function createMockFolder() {
         if (this.dropRate && Math.random() < this.dropRate) {
           return Promise.reject({ status: 503 });
         }
-        files[name] = { bytes: bytes, rev: String(++revCounter) };
+        files[name] = { bytes: bytes, rev: String(++revCounter), modified: stamp() };
         return Promise.resolve();
       }
     };

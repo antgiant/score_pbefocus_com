@@ -49,6 +49,12 @@ var FolderProviders = (function () {
     });
   }
 
+  /** ISO timestamp to epoch milliseconds, or undefined when missing (engine then treats the file as current). */
+  function toMillis(iso) {
+    var ms = Date.parse(iso);
+    return isNaN(ms) ? undefined : ms;
+  }
+
   function toBytes(response) {
     return response.arrayBuffer().then(function (buf) {
       return new Uint8Array(buf);
@@ -77,7 +83,7 @@ var FolderProviders = (function () {
           // If duplicate names exist (race on first create) keep the first seen.
           if (!(f.name in ids)) {
             ids[f.name] = f.id;
-            acc.push({ name: f.name, rev: f.md5Checksum || (f.modifiedTime + ":" + f.size) });
+            acc.push({ name: f.name, rev: f.md5Checksum || (f.modifiedTime + ":" + f.size), modified: toMillis(f.modifiedTime) });
           }
         });
         return data.nextPageToken ? googleListPage(data.nextPageToken, acc) : acc;
@@ -185,7 +191,7 @@ var FolderProviders = (function () {
       return graphReq(url).then(function (r) { return r.json(); }).then(function (data) {
         (data.value || []).forEach(function (f) {
           if (!f.folder) {
-            acc.push({ name: f.name, rev: f.eTag || (f.lastModifiedDateTime + ":" + f.size) });
+            acc.push({ name: f.name, rev: f.eTag || (f.lastModifiedDateTime + ":" + f.size), modified: toMillis(f.lastModifiedDateTime) });
           }
         });
         return data["@odata.nextLink"] ? graphListPage(data["@odata.nextLink"], acc) : acc;

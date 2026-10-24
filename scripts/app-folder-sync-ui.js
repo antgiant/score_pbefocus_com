@@ -80,6 +80,14 @@ var FolderSyncUI = (function () {
     parts.push(esc(t("storage.connected_to", { provider: providerName(status.provider), folder: status.folderName || "" })));
     parts.push(esc(status.lastSync ? t("storage.last_sync", { time: formatTime(status.lastSync) }) : t("storage.never_synced")));
     if (status.pending) { parts.push(esc(t("storage.pending_changes"))); }
+    if (status.mode === "relay") {
+      parts.push(esc(t("storage.mode_large_event")));
+      if (status.relay) { parts.push(esc(t("storage.mode_relay"))); }
+    }
+    if (status.scorerName) {
+      parts.push(esc(t("storage.scorer_name", { name: status.scorerName })));
+      parts.push(esc(t("storage.scorer_name_note")));
+    }
     return parts.join("<br>");
   }
 
@@ -228,7 +236,12 @@ var FolderSyncUI = (function () {
     on("storage-reconnect", function () {
       var config = FolderSync.readConfig(sessionId);
       var shared = config && config.mode === "shared";
-      guarded(function () { return FolderAuth.get(config.provider).signIn(shared); }).then(function (ok) {
+      var reauth = FolderAuth.get(config.provider);
+      guarded(function () {
+        return reauth.signIn(shared)
+          .then(function () { return reauth.getUserEmail(); })
+          .then(function (email) { FolderSync.setScorerName(sessionId, email); });
+      }).then(function (ok) {
         if (ok) { FolderSync.syncNow(); rerender(); }
       });
     });
@@ -297,11 +310,15 @@ var FolderSyncUI = (function () {
       return Promise.resolve(false);
     }
     var common = function () { return { fetch: fetchImpl, getToken: function () { return auth.getToken(); } }; };
+    var scorerName = null;
 
     return guarded(function () {
       // signIn must start inside the click handler so the popup is allowed.
       var signedIn = provider === "microsoft" ? auth.signIn(shared) : (auth.isSignedIn() ? Promise.resolve() : auth.signIn());
       return signedIn.then(function () {
+        // The signed-in account's email becomes the scorer name on history entries.
+        return auth.getUserEmail().then(function (email) { scorerName = email; });
+      }).then(function () {
         if (kind === "private") {
           if (provider === "google") {
             return FolderProviders.ensureGoogleFolderPath(Object.assign(common(), { path: ["PBE Focus", "scorekeeper", sessionId] }))
@@ -319,6 +336,7 @@ var FolderSyncUI = (function () {
         });
       }).then(function (target) {
         if (!target) { return; } // picker cancelled
+        target.scorerName = scorerName;
         return finishSetup(provider, kind, sessionId, sessionName, target, common());
       });
     }).then(function (ok) {
@@ -344,7 +362,7 @@ var FolderSyncUI = (function () {
         : FolderProviders.createGraphSubfolder(Object.assign({ parent: target.folder, name: subName }, common))
             .then(function (ref) { return { driveId: ref.driveId, itemId: ref.itemId }; });
       return make.then(function (folder) {
-        var sub = { folder: folder, folderName: target.folderName + " / " + subName };
+        var sub = { folder: folder, folderName: target.folderName + " / " + subName, scorerName: target.scorerName };
         return commit(provider, kind, sessionId, sessionName, sub, backendFor(provider, folder));
       });
     });
@@ -352,7 +370,7 @@ var FolderSyncUI = (function () {
 
   function commit(provider, kind, sessionId, sessionName, target, backend) {
     return backend.put(FolderProviders.MARKER_NAME, FolderProviders.buildMarker({ sessionId: sessionId, name: sessionName })).then(function () {
-      return FolderSync.enable(sessionId, { provider: provider, mode: kind, folder: target.folder, folderName: target.folderName });
+      return FolderSync.enable(sessionId, { provider: provider, mode: kind, folder: target.folder, folderName: target.folderName, scorerName: target.scorerName || null });
     });
   }
 
@@ -387,7 +405,7 @@ var FolderSyncUI = (function () {
       });
     }).then(function (result) {
       if (!result || !result.success) { throw { code: "import-failed" }; }
-      return FolderSync.enable(marker.sessionId, { provider: provider, mode: kind, folder: target.folder, folderName: target.folderName });
+      return FolderSync.enable(marker.sessionId, { provider: provider, mode: kind, folder: target.folder, folderName: target.folderName, scorerName: target.scorerName || null });
     }).then(function () {
       if (typeof switchSession === "function") { return switchSession(marker.sessionId); }
     }).then(function () {

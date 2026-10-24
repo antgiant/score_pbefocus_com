@@ -20,6 +20,17 @@ var FolderSyncEngine = (function () {
   var SNAPSHOT_PREFIX = "snapshot-";
   var FILE_SUFFIX = ".yjs";
 
+  // Large events: beyond RELAY_ENTER_CLIENTS distinct scorers, ordinary devices stop
+  // pulling every outbox and read relay snapshots instead; a few devices relay.
+  var RELAY_DEFAULTS = {
+    enterClients: 20,
+    exitClients: 15,
+    relayCount: 3,
+    snapshotIntervalMs: 30000,
+    activeMs: 5 * 60 * 1000,
+    freshSnapshotMs: 3 * 60 * 1000
+  };
+
   var FAST_INTERVAL_MS = 15000;
   var IDLE_INTERVAL_MS = 60000;
   var MAX_BACKOFF_MS = 30000;
@@ -70,6 +81,37 @@ var FolderSyncEngine = (function () {
     return opts && opts.active ? FAST_INTERVAL_MS : IDLE_INTERVAL_MS;
   }
 
+  function relayConfig(overrides) {
+    var cfg = {};
+    Object.keys(RELAY_DEFAULTS).forEach(function (k) {
+      cfg[k] = overrides && overrides[k] != null ? overrides[k] : RELAY_DEFAULTS[k];
+    });
+    return cfg;
+  }
+
+  function isRecent(entry, now, windowMs) {
+    // Backends that do not report modified times are treated as always current.
+    return entry.modified == null || now - entry.modified <= windowMs;
+  }
+
+  /**
+   * Devices that act as relays: the lowest client ids among devices whose
+   * files changed recently. Every device computes the same answer from the
+   * same listing, so no locks or messages are needed. The caller is always a
+   * candidate so a lone device can still relay.
+   */
+  function electRelays(entries, selfId, now, cfg) {
+    var active = {};
+    active[selfId] = true;
+    entries.forEach(function (entry) {
+      var parsed = parseFileName(entry.name);
+      if (parsed && isRecent(entry, now, cfg.activeMs)) {
+        active[parsed.clientId] = true;
+      }
+    });
+    return Object.keys(active).sort().slice(0, cfg.relayCount);
+  }
+
   function isErrorOffline(err) {
     return !!(err && (err.offline || err.code === "offline"));
   }
@@ -81,6 +123,7 @@ var FolderSyncEngine = (function () {
     var store = options.store;
     var clientId = options.clientId;
     var now = options.now || Date.now;
+    var relayCfg = relayConfig(options.relay);
 
     var started = false;
     var syncing = null;
@@ -91,6 +134,10 @@ var FolderSyncEngine = (function () {
     var outbox = null; // merged Uint8Array of locally originated updates
     var known = {}; // file name -> last applied revision
     var knownLoaded = false;
+    var relayMode = false; // large event: ordinary devices read snapshots
+    var isRelay = false; // this device is elected to relay
+    var snapshotDirty = true;
+    var lastSnapshotAt = 0;
 
     function onUpdate(update, origin) {
       if (origin === REMOTE_ORIGIN) {
@@ -98,6 +145,7 @@ var FolderSyncEngine = (function () {
       }
       outbox = outbox ? Y.mergeUpdates([outbox, update]) : update;
       dirty = true;
+      snapshotDirty = true;
       persist();
     }
 
@@ -160,17 +208,49 @@ var FolderSyncEngine = (function () {
       });
     }
 
-    /** List the folder and apply every changed file from other devices. */
+    /** Decide which files to read this cycle (also updates relay mode and role). */
+    function planPull(entries) {
+      var t = now();
+      var outboxClients = {};
+      outboxClients[clientId] = true;
+      entries.forEach(function (entry) {
+        var parsed = parseFileName(entry.name);
+        if (parsed && parsed.kind === "outbox") {
+          outboxClients[parsed.clientId] = true;
+        }
+      });
+      var count = Object.keys(outboxClients).length;
+      relayMode = relayMode ? count > relayCfg.exitClients : count > relayCfg.enterClients;
+      isRelay = relayMode && electRelays(entries, clientId, t, relayCfg).indexOf(clientId) !== -1;
+
+      var freshSnapshot = entries.some(function (entry) {
+        var parsed = parseFileName(entry.name);
+        return parsed && parsed.kind === "snapshot" && parsed.clientId !== clientId && isRecent(entry, t, relayCfg.freshSnapshotMs);
+      });
+      var wanted;
+      if (relayMode && !isRelay && freshSnapshot) {
+        wanted = "snapshot";
+      } else if (!relayMode && Object.keys(known).length === 0) {
+        wanted = "any"; // new device: a snapshot is a shortcut, outboxes are the source of truth
+      } else {
+        wanted = "outbox";
+      }
+      return entries.filter(function (entry) {
+        var parsed = parseFileName(entry.name);
+        if (!parsed || parsed.clientId === clientId) {
+          return false;
+        }
+        return wanted === "any" || parsed.kind === wanted;
+      });
+    }
+
+    /** List the folder and apply every changed file the plan asks for. */
     function pull() {
       return Promise.resolve(backend.list()).then(function (entries) {
         var applied = 0;
         var chain = Promise.resolve();
         var firstError = null;
-        entries.forEach(function (entry) {
-          var parsed = parseFileName(entry.name);
-          if (!parsed || parsed.clientId === clientId) {
-            return;
-          }
+        planPull(entries).forEach(function (entry) {
           if (known[entry.name] === entry.rev) {
             return;
           }
@@ -189,6 +269,7 @@ var FolderSyncEngine = (function () {
               }
               known[entry.name] = entry.rev;
               applied++;
+              snapshotDirty = true;
             }).catch(function (err) {
               // Keep going; the revision stays unknown so it is retried next cycle.
               if (!firstError) {
@@ -208,6 +289,18 @@ var FolderSyncEngine = (function () {
       });
     }
 
+    /** Relays publish a snapshot of everything they have merged, at most once per interval. */
+    function relayDuty() {
+      if (!isRelay || !snapshotDirty || now() - lastSnapshotAt < relayCfg.snapshotIntervalMs) {
+        return Promise.resolve(false);
+      }
+      return writeSnapshot().then(function () {
+        snapshotDirty = false;
+        lastSnapshotAt = now();
+        return true;
+      });
+    }
+
     /** Write a full-state snapshot (never deletes other devices' files). */
     function writeSnapshot() {
       return Promise.resolve(backend.put(snapshotName(clientId), Y.encodeStateAsUpdate(doc)));
@@ -221,6 +314,9 @@ var FolderSyncEngine = (function () {
       syncing = start()
         .then(flush)
         .then(pull)
+        .then(function (applied) {
+          return relayDuty().then(function () { return applied; });
+        })
         .then(function (applied) {
           failures = 0;
           lastError = null;
@@ -258,7 +354,14 @@ var FolderSyncEngine = (function () {
       } else if (dirty) {
         state = "pending";
       }
-      return { state: state, pending: dirty, lastSync: lastSync, failures: failures };
+      return {
+        state: state,
+        pending: dirty,
+        lastSync: lastSync,
+        failures: failures,
+        mode: relayMode ? "relay" : "standard",
+        relay: isRelay
+      };
     }
 
     return {
@@ -280,6 +383,8 @@ var FolderSyncEngine = (function () {
     snapshotName: snapshotName,
     backoffDelay: backoffDelay,
     pollInterval: pollInterval,
+    electRelays: electRelays,
+    relayConfig: relayConfig,
     REMOTE_ORIGIN: REMOTE_ORIGIN
   };
 })();

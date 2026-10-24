@@ -154,4 +154,21 @@ describe('FolderSync controller', () => {
     assert.strictEqual(status.state, 'offline');
     assert.strictEqual(status.pending, true);
   });
+
+  it('records the signed-in email as scorer name and shows it with a visibility note', async () => {
+    run(`FolderAuth.google.getToken = function () { return Promise.resolve("t"); };
+         FolderProviders.createGoogleBackend = function () { return { list: function () { return Promise.resolve([]); }, get: function () { return Promise.resolve(null); }, put: function () { return Promise.resolve(); } }; };`);
+    await run('FolderSync.enable("sess-1", { provider: "google", mode: "shared", folder: { folderId: "F" }, folderName: "Event", scorerName: "scorer@example.org" })');
+    assert.strictEqual(run('FolderSync.getScorerName()'), 'scorer@example.org');
+    const html = run('FolderSyncUI.dialogHTML()');
+    assert.match(html, /storage\.scorer_name:\{"name":"scorer@example\.org"\}/);
+    assert.match(html, /storage\.scorer_name_note/);
+    run('FolderSync.setScorerName("sess-1", "other@example.org")');
+    assert.strictEqual(run('FolderSync.readConfig("sess-1").scorerName'), 'other@example.org');
+    assert.strictEqual(run('FolderSync.getScorerName()'), 'other@example.org');
+  });
+
+  it('has no scorer name when sync is off', () => {
+    assert.strictEqual(run('FolderSync.getScorerName()'), null);
+  });
 });

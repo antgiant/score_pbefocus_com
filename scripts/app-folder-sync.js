@@ -125,6 +125,7 @@ var FolderSync = (function () {
     s.syncing = !!current.syncing;
     s.provider = current.config.provider;
     s.folderName = current.config.folderName;
+    s.scorerName = current.config.scorerName || null;
     return s;
   }
 
@@ -221,6 +222,21 @@ var FolderSync = (function () {
     return startForSession(sessionId);
   }
 
+  /** Name recorded on history entries while this quiz syncs (the signed-in email). */
+  function getScorerName() {
+    return (current && current.config && current.config.scorerName) || null;
+  }
+
+  /** Remember the signed-in account's email for a session (kept in this device's settings). */
+  function setScorerName(sessionId, name) {
+    var config = readConfig(sessionId);
+    if (!config) { return; }
+    config.scorerName = name || null;
+    writeConfig(sessionId, config);
+    if (current && current.sessionId === sessionId) { current.config.scorerName = config.scorerName; }
+    notify();
+  }
+
   function disable(sessionId) {
     writeConfig(sessionId, null);
     if (current && current.sessionId === sessionId) { stopCurrent(); }
@@ -252,6 +268,8 @@ var FolderSync = (function () {
     hasAnyConfig: hasAnyConfig,
     newClientId: newClientId,
     enable: enable,
+    getScorerName: getScorerName,
+    setScorerName: setScorerName,
     disable: disable,
     startForSession: startForSession,
     stop: stopCurrent,
