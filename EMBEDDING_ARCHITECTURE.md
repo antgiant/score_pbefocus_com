@@ -60,7 +60,7 @@ This document describes the architecture for embedding PBE Score Keeper as a ful
 // Host loads PBE Score Keeper in iframe
 <iframe 
   id="pbe-scorekeeper" 
-  src="https://pbe-scores.wooleys.us/?embedded=1&apiVersion=1"
+  src="https://score.pbefocus.com/?embedded=1&apiVersion=1"
   sandbox="allow-scripts allow-same-origin allow-downloads"
 />
 
@@ -279,7 +279,7 @@ var EMBEDDING_CONFIG = {
   <div id="scorekeeper-container">
     <iframe 
       id="scorekeeper"
-      src="https://pbe-scores.wooleys.us/?embedded=1"
+      src="https://score.pbefocus.com/?embedded=1"
       style="width: 100%; height: 600px;"
     ></iframe>
   </div>
@@ -287,7 +287,7 @@ var EMBEDDING_CONFIG = {
   <script>
     const pbeApp = new PBEScoreKeeperAPI(
       document.getElementById('scorekeeper'),
-      { targetOrigin: 'https://pbe-scores.wooleys.us' }
+      { targetOrigin: 'https://score.pbefocus.com' }
     );
 
     // Wait for app ready

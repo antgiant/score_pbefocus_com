@@ -10,14 +10,14 @@ Use the host-side helper when possible:
 <script src="scripts/app-embedding-client.js"></script>
 <iframe
   id="scorekeeper"
-  src="https://pbe-scores.wooleys.us/?embedded=1"
+  src="https://score.pbefocus.com/?embedded=1"
   sandbox="allow-scripts allow-same-origin allow-downloads">
 </iframe>
 ```
 
 ```javascript
 const api = new PBEScoreKeeperAPI(document.getElementById("scorekeeper"), {
-  targetOrigin: "https://pbe-scores.wooleys.us"
+  targetOrigin: "https://score.pbefocus.com"
 });
 
 await api.ready();
@@ -37,7 +37,7 @@ iframe.contentWindow.postMessage({
   id: "request-1",
   command: "session:list",
   payload: {}
-}, "https://pbe-scores.wooleys.us");
+}, "https://score.pbefocus.com");
 ```
 
 Iframe to host:
@@ -214,7 +214,7 @@ iframe.contentWindow.postMessage({
   type: "embedding:subscribe",
   id: "sub-1",
   events: ["question:scored", "sync:stateChanged"]
-}, "https://pbe-scores.wooleys.us");
+}, "https://score.pbefocus.com");
 ```
 
 Available events:

@@ -7,7 +7,7 @@ This guide is for host sites that want to embed PBE Score Keeper as an iframe an
 The scorekeeper must be served from a web origin. Embedded mode is enabled with:
 
 ```text
-https://pbe-scores.wooleys.us/?embedded=1
+https://score.pbefocus.com/?embedded=1
 ```
 
 Use HTTPS in production so WebRTC sync and storage APIs work consistently.
@@ -19,7 +19,7 @@ Use the smallest sandbox that supports your integration:
 ```html
 <iframe
   id="scorekeeper"
-  src="https://pbe-scores.wooleys.us/?embedded=1"
+  src="https://score.pbefocus.com/?embedded=1"
   sandbox="allow-scripts allow-same-origin allow-downloads"
   style="width: 100%; height: 720px; border: 0;">
 </iframe>
@@ -30,12 +30,12 @@ Do not add broader sandbox permissions unless the host workflow specifically nee
 ## 3. Load The Client
 
 ```html
-<script src="https://pbe-scores.wooleys.us/scripts/app-embedding-client.js"></script>
+<script src="https://score.pbefocus.com/scripts/app-embedding-client.js"></script>
 ```
 
 ```javascript
 const pbe = new PBEScoreKeeperAPI(document.getElementById("scorekeeper"), {
-  targetOrigin: "https://pbe-scores.wooleys.us",
+  targetOrigin: "https://score.pbefocus.com",
   timeoutMs: 10000,
   retries: 1
 });
