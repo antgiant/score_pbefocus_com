@@ -83,10 +83,13 @@ The old origin is `pbe-scores.wooleys.us`; this repo's CNAME is `score.pbefocus.
 
 To do: add `score.pbefocus.com` to both OAuth registrations and the family `site-nav.js`; update `web+pbe://` handlers, manifest `start_url`/scope, the embedding docs' hosted URL (done) and README language links.
 
+## Decisions (2026-10-24)
+
+1. **[APPROVED]** Score Keeper proceeds in parallel with the shared storage module; it does not wait for Karaoke/Quiz.
+2. **[APPROVED]** `score.pbefocus.com` is the final origin.
+4. **[APPROVED]** The combined Microsoft scope set (owner says the registration is already done).
+
 ## Open questions
 
-1. Wait for the Karaoke/Quiz phases, or proceed in parallel? (Recommendation: parallel.)
-2. Is `score.pbefocus.com` the final origin, and does the move come before or after cloud sync?
 3. Add a zero-setup "back up to my account" option using the private `PBE Focus` app folder, alongside shared folders?
-4. Approve the combined Microsoft scope set?
-5. Embedding: drop `sync:*` with no replacement (recommended), or keep a read-only "disabled" state?
+5. Embedding: drop `sync:*` with no replacement (recommended), or keep a read-only "disabled" state? (Owner answered "Yes"; needs clarifying which option.)
