@@ -49,6 +49,49 @@
       document.documentElement.setAttribute("data-initializing", "true");
     })();
   </script>
+  <script>
+    // Activate a downloaded app update as soon as the page loads. A plain reload never activates a
+    // waiting service worker, and an older installed version keeps serving its own cached scripts,
+    // so this lives in the page itself (which is always fetched fresh). Runs at most once a minute.
+    (function () {
+      if (!("serviceWorker" in navigator)) { return; }
+      var KEY = "pbe-sw-auto-activate";
+      var reloading = false;
+      function activate(worker) {
+        try {
+          if (Date.now() - (Number(sessionStorage.getItem(KEY)) || 0) < 60000) { return; }
+          sessionStorage.setItem(KEY, String(Date.now()));
+        } catch (e) {}
+        worker.postMessage({ type: "SKIP_WAITING" });
+      }
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloading || !window.__pbeSwAutoActivated) { return; }
+        reloading = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (!reg || !navigator.serviceWorker.controller) { return; }
+        function whenWaiting(worker) {
+          window.__pbeSwAutoActivated = true;
+          activate(worker);
+        }
+        if (reg.waiting) { whenWaiting(reg.waiting); return; }
+        reg.addEventListener("updatefound", function () {
+          var installing = reg.installing;
+          if (!installing) { return; }
+          installing.addEventListener("statechange", function () {
+            if (installing.state === "installed" && reg.waiting) { whenWaiting(reg.waiting); }
+          });
+        });
+        if (reg.installing) {
+          var current = reg.installing;
+          current.addEventListener("statechange", function () {
+            if (current.state === "installed" && reg.waiting) { whenWaiting(reg.waiting); }
+          });
+        }
+      }).catch(function () {});
+    })();
+  </script>
   <link href="css/jquery-ui.min.css" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <script defer src="scripts/jquery-3.7.1.min.js"></script>
@@ -460,7 +503,7 @@
     </div>
     <div id="scores_tabs_placeholder"></div>
     <footer><p><span data-i18n="footer.feedback">Have an idea to make this better?</span> <a id="footer_feedback_link" target="_blank" rel="noopener noreferrer" href="https://docs.google.com/forms/d/e/1FAIpQLSfp9N-Zryv6H0Dw70PVC9ImTH81JabJ6LGA-DgCjhAn1SQqjA/viewform?usp=dialog" data-feedback-base-url="https://docs.google.com/forms/d/e/1FAIpQLSfp9N-Zryv6H0Dw70PVC9ImTH81JabJ6LGA-DgCjhAn1SQqjA/viewform?usp=dialog" data-feedback-version-entry="entry.1929638831" data-i18n="footer.let_me_know">Let me know</a>.</p>
-    <p><center data-i18n="footer.version" data-i18n-version="2.29.2">v 2.29.2</center></p></footer>
+    <p><center data-i18n="footer.version" data-i18n-version="2.29.3">v 2.29.3</center></p></footer>
 </body>
 
 </html>

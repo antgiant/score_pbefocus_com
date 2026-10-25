@@ -1,4 +1,4 @@
-const APP_VERSION = "2.29.2";
+const APP_VERSION = "2.29.3";
 const CACHE_PREFIX = "pbe-score-keeper";
 const SHELL_CACHE_NAME = `${CACHE_PREFIX}-shell-${APP_VERSION}`;
 const STATIC_RUNTIME_CACHE_NAME = `${CACHE_PREFIX}-static-${APP_VERSION}`;
@@ -192,7 +192,8 @@ function isResponseExpired(response, maxAgeMs) {
 function precacheUrls(cache, urls, isRequired) {
   return Promise.allSettled(
     urls.map(function(url) {
-      return cache.add(url);
+      // Bypass the browser HTTP cache so a new version never precaches stale copies of its own files.
+      return cache.add(new Request(url, { cache: "reload" }));
     })
   ).then(function(results) {
     if (!isRequired) {
@@ -423,7 +424,8 @@ function cacheFirst(request, cacheName, policy, event) {
 
 function staleWhileRevalidate(request, cacheName, policy, event) {
   return caches.match(request).then(function(cachedResponse) {
-    var networkPromise = fetch(request).then(function(networkResponse) {
+    // Revalidate with the server (conditional request) instead of trusting the HTTP cache.
+    var networkPromise = fetch(request, { cache: "no-cache" }).then(function(networkResponse) {
       if (isCacheableResponse(networkResponse)) {
         event.waitUntil(putInRuntimeCache(cacheName, request, networkResponse, policy));
       }

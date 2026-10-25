@@ -388,8 +388,19 @@ function register_service_worker() {
   navigator.serviceWorker.register("service-worker.js", { scope: "./" })
     .then(function(registration) {
       if (registration.waiting) {
-        if (typeof showUpdateNotification === "function" && typeof t === "function") {
-          showUpdateNotification(t("advanced.update_available"), "warning");
+        // A new version finished installing on an earlier visit. A plain reload never activates it
+        // (the old worker keeps control), so activate it now, while the page has just loaded and
+        // nothing is in progress. The guard stops a reload loop if activation ever fails.
+        var lastAutoActivate = 0;
+        try { lastAutoActivate = Number(sessionStorage.getItem("pbe-sw-auto-activate")) || 0; } catch (e) {}
+        if (Date.now() - lastAutoActivate > 60000 && typeof requestServiceWorkerActivation === "function") {
+          try { sessionStorage.setItem("pbe-sw-auto-activate", String(Date.now())); } catch (e) {}
+          requestServiceWorkerActivation(registration, true);
+        } else if (typeof showUpdateNotification === "function" && typeof t === "function" && typeof reloadAppForUpdate === "function") {
+          showUpdateNotification(t("advanced.update_available"), "warning", {
+            actionLabel: t("advanced.reload_now"),
+            onAction: reloadAppForUpdate
+          });
         }
       }
 
@@ -402,8 +413,11 @@ function register_service_worker() {
         installingWorker.addEventListener("statechange", function() {
           if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
             console.log("Service worker update installed");
-            if (registration.waiting && typeof showUpdateNotification === "function" && typeof t === "function") {
-              showUpdateNotification(t("advanced.update_available"), "warning");
+            if (registration.waiting && typeof showUpdateNotification === "function" && typeof t === "function" && typeof reloadAppForUpdate === "function") {
+              showUpdateNotification(t("advanced.update_available"), "warning", {
+                actionLabel: t("advanced.reload_now"),
+                onAction: reloadAppForUpdate
+              });
             }
           }
         });

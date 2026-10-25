@@ -286,3 +286,15 @@ test('service worker stores and consumes share-target payload once', async () =>
   const consumedTwice = await context.consumeShareTargetImportPayload();
   assert.equal(consumedTwice.ok, false);
 });
+
+test('index.html activates a waiting service worker on load, at most once a minute', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
+  assert.match(html, /SKIP_WAITING/);
+  assert.match(html, /pbe-sw-auto-activate/);
+  assert.match(html, /< 60000/);
+});
+
+test('service worker precaches with the HTTP cache bypassed', () => {
+  const sw = fs.readFileSync(path.join(__dirname, '..', '..', 'service-worker.js'), 'utf8');
+  assert.match(sw, /new Request\(url, \{ cache: "reload" \}\)/);
+});

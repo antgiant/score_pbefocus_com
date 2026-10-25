@@ -364,8 +364,8 @@ Available in `app-state.js`:
 
 ### Testing
 
-- **Total Tests**: 350
-- **Passing**: 350
+- **Total Tests**: 352
+- **Passing**: 352
 - **Failed**: 0
 - **Skipped**: 0
 - **Test Files**:
