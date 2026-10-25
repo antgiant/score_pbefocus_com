@@ -7,7 +7,7 @@
  * - Periodic background sync for auto-updates (when installed as PWA)
  */
 
-var APP_VERSION = "2.29.1";
+var APP_VERSION = "2.29.2";
 var PWA_CACHE_PREFIX = "pbe-score-keeper";
 var PWA_TOOLS_DIALOG_ID = "pwa-tools-dialog-overlay";
 var pwaToolsDialogKeyHandler = null;

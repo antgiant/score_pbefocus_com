@@ -328,6 +328,7 @@ register_i18n_language('fr', {
       "delete_session": "Êtes-vous sûr de vouloir supprimer définitivement \"{{name}}\" ?"
     },
     "alerts": {
+      "migration_failed": "La migration des données a échoué. Vos données sont en sécurité dans localStorage. Veuillez exporter une sauvegarde et signaler ce problème.",
       "cannot_delete_only_session": "Vous ne pouvez pas supprimer la seule Quiz",
       "import_success": "Importation réussie : {{count}} quiz(s) importée(s)",
       "import_failed": "Échec de l'importation : {{error}}",

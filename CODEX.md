@@ -364,13 +364,13 @@ Available in `app-state.js`:
 
 ### Testing
 
-- **Total Tests**: 342
-- **Passing**: 342
+- **Total Tests**: 350
+- **Passing**: 350
 - **Failed**: 0
 - **Skipped**: 0
 - **Test Files**:
   - UI tests: blocks, cross-tab-sync, exports, extra-credit, folder-sync-dialog, history-scorer-name, ignore-question, max-points, reorder, rounding, score-summaries, session-manager, session-question-jump, sessions, teams, timer, ui-mode
-  - Unit tests: calculations, core, created-at-backfill, embedding (api, client, commands, events, integration), folder-providers, folder-sync-engine, header-menu, i18n, i18n-ui, import-export, multi-doc, no-duplicates, pwa-handlers, pwa-support, repair-cache, session-matching, snapshot, timer-inputs, uuid-structures
+  - Unit tests: calculations, core, created-at-backfill, embedding (api, client, commands, events, integration), folder-providers, folder-sync-engine, header-menu, i18n, i18n-keys-used, i18n-ui, import-export, multi-doc, no-duplicates, pwa-handlers, pwa-support, repair-cache, session-matching, snapshot, timer-inputs, uuid-structures
 
 ### Notes for Maintainers
 

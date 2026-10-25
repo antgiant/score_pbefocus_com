@@ -324,6 +324,7 @@ register_i18n_language('pig', {
       "delete_session": "Are-ay ou-yay ure-say ou-yay ant-way o-tay irreversibly-ay elete-day \"{{name}}\"?"
     },
     "alerts": {
+      "migration_failed": "Ata-Day igration-may ailed-fay. Our-Yay ata-day is-ay afe-say in-ay ocalStorage-lay. Ease-Play export-ay a-ay ackup-bay and-ay eport-ray is-thay issue-ay.",
       "cannot_delete_only_session": "Ou-Yay ay-may ot-nay elete-day e-thay only-ay Iz-Quay",
       "import_success": "Import-ay uccessful-say: {{count}} ession(s)-say imported-ay",
       "import_failed": "Import-ay ailed-fay: {{error}}",

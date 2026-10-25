@@ -327,6 +327,7 @@ register_i18n_language('en', {
       "delete_session": "Are you sure you want to irreversibly delete \"{{name}}\"?"
     },
     "alerts": {
+      "migration_failed": "Data migration failed. Your data is safe in localStorage. Please export a backup and report this issue.",
       "cannot_delete_only_session": "You may not delete the only Quiz",
       "import_success": "Import successful: {{count}} quiz(es) imported",
       "import_failed": "Import failed: {{error}}",

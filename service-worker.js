@@ -1,4 +1,4 @@
-const APP_VERSION = "2.29.1";
+const APP_VERSION = "2.29.2";
 const CACHE_PREFIX = "pbe-score-keeper";
 const SHELL_CACHE_NAME = `${CACHE_PREFIX}-shell-${APP_VERSION}`;
 const STATIC_RUNTIME_CACHE_NAME = `${CACHE_PREFIX}-static-${APP_VERSION}`;
@@ -502,18 +502,28 @@ self.addEventListener("fetch", function(event) {
   var category = getRequestCategory(event.request);
 
   if (category === "navigation") {
+    // Serve the page from this version's precached shell so the HTML always matches the
+    // scripts and translations this service worker serves. A newer page is picked up when
+    // the new service worker activates (see the update notification), never half-way.
     event.respondWith(
-      networkFirst(
-        event.request,
-        {
-          cacheName: NAVIGATION_RUNTIME_CACHE_NAME,
-          policy: CACHE_POLICIES.navigation,
-          fallbackUrl: "index.html",
-          timeoutMs: NAVIGATION_TIMEOUT_MS,
-          useNavigationPreload: true
-        },
-        event
-      )
+      caches.open(SHELL_CACHE_NAME).then(function(shellCache) {
+        return shellCache.match("index.html", { ignoreSearch: true });
+      }).then(function(shellResponse) {
+        if (shellResponse) {
+          return shellResponse;
+        }
+        return networkFirst(
+          event.request,
+          {
+            cacheName: NAVIGATION_RUNTIME_CACHE_NAME,
+            policy: CACHE_POLICIES.navigation,
+            fallbackUrl: "index.html",
+            timeoutMs: NAVIGATION_TIMEOUT_MS,
+            useNavigationPreload: true
+          },
+          event
+        );
+      })
     );
     return;
   }
